@@ -109,7 +109,7 @@ void intersect(uint16_t z0, uint16_t z1) {
   typedef struct node_template_s *node_template_ptr;
   typedef struct node_template_s node_template_t[1];
 
-  node_template_t bot, top;
+  node_template_t top, bot;
   bot->v = 0;
   bot->lo = NULL;
   bot->n = 0;
@@ -197,10 +197,11 @@ void intersect(uint16_t z0, uint16_t z1) {
   cbt_it it = cbt_it_at_u(tab, (void *) key, 4);
   printf("Inst\n");
   instantiate(it);
-  int i;
-  for(i = 0; i < freenode; i++) {
-    printf("I%d: %d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
+  void clear_it(void* data, const char* key) {
+    node_template_ptr t = (node_template_ptr) data;
+    if (t != top && t != bot) free(t);
   }
+  cbt_forall(tab, clear_it);
   cbt_clear(tab);
 }
 
@@ -224,6 +225,11 @@ int main() {
 
   intersect(k0, k1);
 
-  //get_count(k1);
+  int i;
+  for(i = 0; i < freenode; i++) {
+    printf("I%d: %d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
+  }
+
+  get_count(k0);
   return 0;
 }
