@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <gmp.h>
+#include "cbt.h"
 
 struct node_s {
   uint8_t v;
@@ -91,14 +92,116 @@ void one_digit_per_box(int r, int c) {
   freenode += 729 + 8;
 }
 
-void intersect(uint16_t k0, uint16_t k1) {
-  node_ptr n0 = pool[k0];
-  node_ptr n1 = pool[k1];
-  if (n0->v == n1->v) {
-    printf("template %d:%d\n", n0->v, n1->v);
-    printf("lo %d:%d\n", n0->lo, n1->lo);
-    printf("hi %d:%d\n", n0->hi, n1->hi);
+void intersect(uint16_t z0, uint16_t z1) {
+  struct node_template_s {
+    uint8_t v;
+    // NULL means this template have been instantiated.
+    // Otherwise it points to the LO template.
+    cbt_it lo;
+    union {
+      // Points to HI template when template is not yet instantiated.
+      cbt_it hi;
+      // During template instantiation we set n to the pool index
+      // of the newly created node.
+      uint16_t n;
+    };
+  };
+  typedef struct node_template_s *node_template_ptr;
+  typedef struct node_template_s node_template_t[1];
+
+  node_template_t bot, top;
+  bot->v = 0;
+  bot->lo = NULL;
+  bot->n = 0;
+  top->v = 1;
+  top->lo = NULL;
+  top->n = 1;
+
+  cbt_t tab;
+  cbt_init(tab);
+
+  void insert_template(uint16_t k0, uint16_t k1) {
+    uint16_t key[2];
+    if (!k0 || !k1) {
+      key[0] = k0;
+      key[1] = k1;
+      cbt_put_u(tab, bot, (void *) key, 4);
+      return;
+    }
+    if (k0 == 1 && k1 == 1) {
+      key[0] = k0;
+      key[1] = k1;
+      cbt_put_u(tab, top, (void *) key, 4);
+      return;
+    }
+    node_ptr n0 = pool[k0];
+    node_ptr n1 = pool[k1];
+    if (n0->v == n1->v) {
+      node_template_ptr t = malloc(sizeof(*t));
+      t->v = n0->v;
+      // Find or create trie entry for LO ZDD meld.
+      key[0] = n0->lo;
+      key[1] = n1->lo;
+      int recurselo = cbt_it_insert_u(&t->lo, tab, (void *) key, 4);
+      // Find or create trie entry for HI ZDD meld.
+      key[0] = n0->hi;
+      key[1] = n1->hi;
+      int recursehi = cbt_it_insert_u(&t->hi, tab, (void *) key, 4);
+      // Insert template.
+      key[0] = k0;
+      key[1] = k1;
+      cbt_put_u(tab, t, (void *) key, 4);
+      if (recurselo) insert_template(n0->lo, n1->lo);
+      if (recursehi) insert_template(n0->hi, n1->hi);
+    }
   }
+
+  void dump(void* data, const char* key) {
+    uint16_t *n = (uint16_t *) key;
+    if (!data) {
+      printf("NULL %d:%d\n", n[0], n[1]);
+      return;
+    }
+    node_template_ptr t = (node_template_ptr) data;
+    if (!t->lo)  {
+      printf("%d:%d = (%d)\n", n[0], n[1], t->n);
+      return;
+    }
+    uint16_t *l = (uint16_t *) cbt_it_key(t->lo);
+    uint16_t *h = (uint16_t *) cbt_it_key(t->hi);
+    printf("%d:%d = %d:%d, %d:%d\n", n[0], n[1], l[0], l[1], h[0], h[1]);
+  }
+
+  int instantiate(cbt_it it) {
+    node_template_ptr t = (node_template_ptr) cbt_it_data(it);
+    // Return if already converted to node.
+    if (!t->lo) return t->n;
+    // Convert to node. Take next free node, and recurse.
+    uint16_t r = freenode++;
+    node_ptr n = pool[r];
+    n->v = t->v;
+    n->lo = instantiate(t->lo);
+    n->hi = instantiate(t->hi);
+    t->lo = NULL;
+    t->n = r;
+    return r;
+  }
+
+  insert_template(z0, z1);
+  freenode = z0;  // Overwrite input trees.
+  cbt_forall(tab, dump);
+  uint16_t key[2];
+  key[0] = z0;
+  key[1] = z1;
+  printf("%d %d\n", key[0], key[1]);
+  cbt_it it = cbt_it_at_u(tab, (void *) key, 4);
+  printf("Inst\n");
+  instantiate(it);
+  int i;
+  for(i = 0; i < freenode; i++) {
+    printf("I%d: %d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
+  }
+  cbt_clear(tab);
 }
 
 int main() {
@@ -117,10 +220,10 @@ int main() {
   uint16_t k0 = freenode;
   one_digit_per_box(0, 0);
   uint16_t k1 = freenode;
-  one_digit_per_box(0, 1);
+  one_digit_per_box(0, 2);
 
   intersect(k0, k1);
 
-  get_count(k1);
+  //get_count(k1);
   return 0;
 }
