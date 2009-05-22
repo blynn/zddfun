@@ -61,6 +61,8 @@ void get_count(uint16_t n) {
 //   10 ... 11, 10 --- 11 until 729 ... T, 729 --- T
 // In general we have 1 ... 2, 1 --- 2 until we reach 81 r + 9 c where
 // we switch to a ZDD like the above.
+//
+// This ZDD has 9*2^720 members.
 void one_digit_per_box(int r, int c) {
   // For (0,0) the order in pool will be 1, 2a to 9a, 2b to 9b, 10 ... 729.
   // More generally we have the 1 ... 81 r + 9 c nodes first.
@@ -116,6 +118,8 @@ void one_digit_per_box(int r, int c) {
 //   10 ... 11a
 //   10 --- 11
 // and so on until 729a --- T, 729b ... T.
+//
+// This ZDD has 9^81 members.
 void global_one_digit_per_box() {
   // The order will be 1, 2a to 9a, 2b to 9b, 10, ...
   int d = freenode;
@@ -139,6 +143,78 @@ void global_one_digit_per_box() {
   pool[d - 1 - 8]->hi = 1;
   pool[d - 1]->lo = 1;
   freenode = d;
+}
+
+// Construct ZDD of sets containing exactly 1 occurrence of digit d in row r.
+// For instance, if d = 3, r = 0:
+//
+//   1 === 2 === 3
+//   3 ... 4a, --- 4b
+//   4a === 5a === ... === 9a === ... === 12a
+//   4b === 5b === ... === 9b === ... === 12b
+//   12a ... 13a, --- 13b
+//   12b ... 13b, --- F
+//   13a === ... === 21a
+//   13b === ... === 21b
+// and so on until:
+//   75a ... F, --- 76
+//   75b ... 76, --- F
+//   76 === ... === 729 === T
+//
+// This ZDD has 9*2^720 members.
+// When intersected with the one-digit-per-box set, the result has
+// 9*8^8*9^72 members. (Pick 1 of 9 positions for d, leaving 8 possible choices
+// for the remaining 8 boxes in that row. The other 81 - 9 boxes can contain
+// any single digitS.)
+// The intersection for all d and a fixed r has 9!*9^72 members.
+// The intersection for all r and a fixed d has 9^9*8^72 members.
+void unique_digit_per_row(int d, int r) {
+  // The order is determined by sorting by number, then by letter.
+  int n = freenode;
+  int next = 81 * r + d;  // The next node involving the digit d.
+  int v = 1;
+  int state = 0;
+  while (v <= 729) {
+    if (v == next) {
+      next += 9;
+      state++;
+      if (state == 1) {
+	// The first split in the ZDD.
+	set_node(n, v, n + 1, n + 2);
+	n++;
+      } else if (state < 9) {
+	// If this is the first occurrence of d, we're on notice.
+	set_node(n, v, n + 2, n + 3);
+	n++;
+	// If we see a second occurrence of d, then branch to FALSE.
+	set_node(n, v, n + 2, 0);
+	n++;
+      } else {
+	// If we never saw d, then branch to FALSE.
+	set_node(n, v, 0, n + 2);
+	n++;
+	// If we see a second occurrence of d, then branch to FALSE.
+	// Otherwise reunite the branches.
+	set_node(n, v, n + 1, 0);
+	n++;
+	next = -1;
+      }
+    } else if (state == 0 || state == 9) {
+      set_node(n, v, n + 1, n + 1);
+      n++;
+    } else {
+      set_node(n, v, n + 2, n + 2);
+      n++;
+      set_node(n, v, n + 2, n + 2);
+      n++;
+    }
+    v++;
+  }
+  // Fix 729, or 729a and 729b.
+  if (pool[n - 2]->hi == n) pool[n - 2]->hi = 1;
+  if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
+  if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
+  freenode = n;
 }
 
 void intersect(uint16_t z0, uint16_t z1) {
@@ -241,13 +317,11 @@ void intersect(uint16_t z0, uint16_t z1) {
 
   insert_template(z0, z1);
   freenode = z0;  // Overwrite input trees.
-  cbt_forall(tab, dump);
+  //cbt_forall(tab, dump);
   uint16_t key[2];
   key[0] = z0;
   key[1] = z1;
-  printf("%d %d\n", key[0], key[1]);
   cbt_it it = cbt_it_at_u(tab, (void *) key, 4);
-  printf("Inst\n");
   instantiate(it);
   void clear_it(void* data, const char* key) {
     node_template_ptr t = (node_template_ptr) data;
@@ -270,8 +344,8 @@ int main() {
   // The universe is {1, ..., 9^3 = 729}.
   // Number rows and columns from 0. Digits are integers [1..9].
   // The digit d at (r, c) is represented by element 81 r + 9 c + d.
-  /*
   uint16_t k0 = freenode;
+  /*
   one_digit_per_box(0, 0);
   uint16_t k1 = freenode;
   one_digit_per_box(0, 1);
@@ -284,14 +358,20 @@ int main() {
   intersect(k0, k1);
   */
 
-  uint16_t k1 = freenode;
-  global_one_digit_per_box();
-
   int i;
-  for(i = k1; i < freenode; i++) {
+  global_one_digit_per_box();
+  for (int r = 0; r < 9; r++) {
+    for (i = 1; i <= 6; i++) {
+      uint16_t k1 = freenode;
+      unique_digit_per_row(i, r);
+      intersect(k0, k1);
+    }
+  }
+
+  for(i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
 
-  get_count(k1);
+  get_count(k0);
   return 0;
 }
