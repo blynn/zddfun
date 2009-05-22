@@ -202,6 +202,9 @@ void intersect(uint16_t z0, uint16_t z1) {
       cbt_put_u(tab, t, (void *) key, 4);
       if (recurselo) insert_template(n0->lo, n1->lo);
       if (recursehi) insert_template(n0->hi, n1->hi);
+    } else {
+      printf("TODO: v != w\n");
+      exit(1);
     }
   }
 
