@@ -5,7 +5,7 @@
 #include "cbt.h"
 
 struct node_s {
-  uint8_t v;
+  uint16_t v;
   uint16_t lo, hi;
 };
 typedef struct node_s *node_ptr;
@@ -15,7 +15,7 @@ node_t pool[1<<16];
 uint16_t freenode;
 mpz_ptr count[1<<16];
 
-void set_node(uint16_t n, uint8_t v, uint16_t lo, uint16_t hi) {
+void set_node(uint16_t n, uint16_t v, uint16_t lo, uint16_t hi) {
   pool[n]->v = v;
   pool[n]->lo = lo;
   pool[n]->hi = hi;
@@ -92,9 +92,58 @@ void one_digit_per_box(int r, int c) {
   freenode += 729 + 8;
 }
 
+// Construct ZDD of sets containing exactly 1 digit at for all boxes
+// (r, c), starting at pool entry d.
+//
+// The ZDD begins:
+//   1 ... 2a
+//   1 --- 2b
+//   2a ... 3a
+//   2a --- 3b
+//   ...
+//   9a ... F
+//   9a --- 10
+//
+//   2b ... 3b
+//   2b --- F
+//   3b ... 4b
+//   3b --- F
+//   ...
+//   9b ... 10
+//   9b --- F
+//
+// and repeats every 10 levels:
+//   10 ... 11a
+//   10 --- 11
+// and so on until 729a --- T, 729b ... T.
+void global_one_digit_per_box() {
+  // The order will be 1, 2a to 9a, 2b to 9b, 10, ...
+  int d = freenode;
+  int k;
+  for (k = 0; k < 81; k++) {
+    int i;
+    for (i = 1; i < 9; i++) {
+      // Nodes 9k + 1, 9k + 2a to 9k + 8a.
+      set_node(d, 9 * k + i, d + 1, d + 9);
+      // Nodes 9k + 2b to 9k + 9b.
+      set_node(d + 9, 9 * k + i + 1, d + 9 + 1, 0);
+      d++;
+    }
+    // Node 9k + 9a.
+    set_node(d, 9 * k + i, 0, d + 9);
+    // Node 9k + 9b.
+    set_node(d + 9 - 1, 9 * k + i, d + 9, 0);
+    d += 9;
+  }
+  // Fix 729a and 729b.
+  pool[d - 1 - 8]->hi = 1;
+  pool[d - 1]->lo = 1;
+  freenode = d;
+}
+
 void intersect(uint16_t z0, uint16_t z1) {
   struct node_template_s {
-    uint8_t v;
+    uint16_t v;
     // NULL means this template have been instantiated.
     // Otherwise it points to the LO template.
     cbt_it lo;
@@ -218,18 +267,28 @@ int main() {
   // The universe is {1, ..., 9^3 = 729}.
   // Number rows and columns from 0. Digits are integers [1..9].
   // The digit d at (r, c) is represented by element 81 r + 9 c + d.
+  /*
   uint16_t k0 = freenode;
   one_digit_per_box(0, 0);
   uint16_t k1 = freenode;
-  one_digit_per_box(0, 2);
-
+  one_digit_per_box(0, 1);
   intersect(k0, k1);
+  k1 = freenode;
+  one_digit_per_box(0, 2);
+  intersect(k0, k1);
+  k1 = freenode;
+  one_digit_per_box(0, 3);
+  intersect(k0, k1);
+  */
+
+  uint16_t k1 = freenode;
+  global_one_digit_per_box();
 
   int i;
-  for(i = 0; i < freenode; i++) {
-    printf("I%d: %d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
+  for(i = k1; i < freenode; i++) {
+    printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
 
-  get_count(k0);
+  get_count(k1);
   return 0;
 }
