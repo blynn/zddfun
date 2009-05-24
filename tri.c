@@ -325,12 +325,26 @@ int main() {
     }
   }
   // Dominos.
+  /*
   for (int i = 0; i < 8; i++) {
     for (int j = 1; j < 8; j++) {
       darray_append(board[i][j - 1], (void *) v);
       darray_append(board[i][j], (void *) v++);
       darray_append(board[j - 1][i], (void *) v);
       darray_append(board[j][i], (void *) v++);
+    }
+  }
+  */
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 8; j++) {
+      if (j != 8 - 1) {
+	darray_append(board[i][j], (void *) v);
+	darray_append(board[i][j + 1], (void *) v++);
+      }
+      if (i != 8 - 1) {
+	darray_append(board[i][j], (void *) v);
+	darray_append(board[i + 1][j], (void *) v++);
+      }
     }
   }
 
@@ -353,12 +367,14 @@ int main() {
   uint32_t k0 = freenode;
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
+      /*
       void print_it(void *data) {
 	int i = (int) data;
 	printf(" %d", i);
       }
       darray_forall(board[i][j], print_it);
       printf("\n");
+      */
       uint32_t k1 = freenode;
       contains_exactly_one(board[i][j]);
       if (k0 != k1) intersect(k0, k1);
