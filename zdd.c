@@ -51,62 +51,6 @@ void get_count(uint32_t n) {
   gmp_printf("%d: %Zd\n", n, count[n]);
 }
 
-// Construct ZDD of sets containing exactly 1 digit at (r, c), starting
-// at pool entry d.
-//
-// For (0, 0) the graph is:
-//   1 ... 2a
-//   1 --- 2b
-//   2a ... 3a
-//   2a --- 3b
-//   ...
-//   9a ... F
-//   9a --- 10
-//
-//   2b ... 3b
-//   2b --- F
-//   3b ... 4b
-//   3b --- F
-//   ...
-//   9b ... 10
-//   9b --- F
-//
-//   10 ... 11, 10 --- 11 until 729 ... T, 729 --- T
-// In general we have 1 ... 2, 1 --- 2 until we reach 81 r + 9 c where
-// we switch to a ZDD like the above.
-//
-// This ZDD has 9*2^720 members.
-void one_digit_per_box(int r, int c) {
-  // For (0,0) the order in pool will be 1, 2a to 9a, 2b to 9b, 10 ... 729.
-  // More generally we have the 1 ... 81 r + 9 c nodes first.
-  int d = freenode - 1;
-  int i;
-  int n = 81 * r + 9 * c;
-  for (i = 1; i <= n; i++) {
-    // Nodes 1 to 81 r + 9 c.
-    set_node(d + i, i, d + i + 1, d + i + 1);
-  }
-  d += n;
-
-  for (i = 1; i < 9; i++) {
-    // In the following comments, (+n) means we add n to the node numbers.
-    // (+n) Nodes 1 and 2a to 8a.
-    set_node(d + i, n + i, d + 1 + i, d + 9 + i);
-    // (+n) Nodes 2b to 9b.
-    set_node(d + 9 + i, n + i + 1, d + 9 + i + 1, 0);
-  }
-  // (+n) Node 9a.
-  set_node(d + i, n + i, 0, d + 9 + i);
-  // Nodes (+n) 10 to 728.
-  d += 9 + 9 - (n + i + 1);
-  for (i = n + i + 1; i < 729; i++) {
-    set_node(d + i, i, d + i + 1, d + i + 1);
-  }
-  // Node 729.
-  set_node(d + i, i, 1, 1);
-  freenode += 729 + 8;
-}
-
 // Construct ZDD of sets containing exactly 1 digit at for all boxes
 // (r, c), starting at pool entry d.
 //
@@ -141,15 +85,14 @@ void global_one_digit_per_box() {
 //
 //   1 === 2 === 3
 //   3 ... 4a, --- 4b
-//   4a === 5a === ... === 9a === ... === 12a
-//   4b === 5b === ... === 9b === ... === 12b
-//   12a ... 13a, --- 13b
-//   12b ... 13b, --- F
-//   13a === ... === 21a
-//   13b === ... === 21b
+//   4a === 5a === ... === 9a === ... === 11a === 12
+//   4b === 5b === ... === 9b === ... === 11b === 13b
+//   12 ... 13a, --- 13b
+//   13a === ... === 20a === 21
+//   13b === ... === 20b === 22b
 // and so on until:
-//   75a ... F, --- 76
-//   75b ... 76, --- F
+//   74a === 75 ... F, --- 76
+//   74b === 76
 //   76 === ... === 729 === T
 //
 // This ZDD has 9*2^720 members.
@@ -174,19 +117,15 @@ void unique_digit_per_row(int d, int r) {
 	set_node(n, v, n + 1, n + 2);
 	n++;
       } else if (state < 9) {
+	// Fix previous node. We must not have a second occurrence of d.
+	set_node(n - 1, v - 1, n + 2, n + 2);
 	// If this is the first occurrence of d, we're on notice.
-	set_node(n, v, n + 2, n + 3);
-	n++;
-	// If we see a second occurrence of d, then branch to FALSE.
-	set_node(n, v, n + 2, 0);
+	set_node(n, v, n + 1, n + 2);
 	n++;
       } else {
 	// If we never saw d, then branch to FALSE.
-	set_node(n, v, 0, n + 2);
-	n++;
-	// If we see a second occurrence of d, then branch to FALSE.
 	// Otherwise reunite the branches.
-	set_node(n, v, n + 1, 0);
+	set_node(n, v, 0, n + 1);
 	n++;
 	next = -1;
       }
@@ -201,10 +140,11 @@ void unique_digit_per_row(int d, int r) {
     }
     v++;
   }
-  // Fix 729, or 729a and 729b.
-  if (pool[n - 2]->hi == n) pool[n - 2]->hi = 1;
-  if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
-  if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
+  // Fix last nodes.
+  if (pool[n - 2]->lo >= n) pool[n - 2]->lo = 1;
+  if (pool[n - 2]->hi >= n) pool[n - 2]->hi = 1;
+  if (pool[n - 1]->lo >= n) pool[n - 1]->lo = 1;
+  if (pool[n - 1]->hi >= n) pool[n - 1]->hi = 1;
   freenode = n;
 }
 
