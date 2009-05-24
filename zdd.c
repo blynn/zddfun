@@ -255,50 +255,47 @@ void intersect(uint16_t z0, uint16_t z1) {
   top->n = 1;
 
   // Naive implementation with two tries. One stores templates, the other
-  // unique nodes. Knuth describes how to do meld using just memory
-  // allocated for a pool of nodes.
+  // unique nodes. Knuth describes how to meld using just memory allocated for
+  // a pool of nodes. Briefly, handle duplicates by executing bucket sort level
+  // by level, from the bottom up.
   cbt_t tab;
   cbt_init(tab);
 
   cbt_t node_tab;
   cbt_init(node_tab);
 
-  void insert_template(uint16_t k0, uint16_t k1) {
+  cbt_it insert_template(uint16_t k0, uint16_t k1) {
     uint16_t key[2];
+    key[0] = k0;
+    key[1] = k1;
+    cbt_it it;
+    int just_created = cbt_it_insert_u(&it, tab, (void *) key, 4);
+    if (!just_created) return it;
     if (!k0 || !k1) {
-      key[0] = k0;
-      key[1] = k1;
-      cbt_put_u(tab, bot, (void *) key, 4);
-      return;
+      cbt_it_put(it, bot);
+      return it;
     }
     if (k0 == 1 && k1 == 1) {
-      key[0] = k0;
-      key[1] = k1;
-      cbt_put_u(tab, top, (void *) key, 4);
-      return;
+      cbt_it_put(it, top);
+      return it;
     }
     node_ptr n0 = pool[k0];
     node_ptr n1 = pool[k1];
     if (n0->v == n1->v) {
       node_template_ptr t = malloc(sizeof(*t));
       t->v = n0->v;
-      // Find or create trie entry for LO ZDD meld.
-      key[0] = n0->lo;
-      key[1] = n1->lo;
-      int recurselo = cbt_it_insert_u(&t->lo, tab, (void *) key, 4);
-      // Find or create trie entry for HI ZDD meld.
-      key[0] = n0->hi;
-      key[1] = n1->hi;
-      int recursehi = cbt_it_insert_u(&t->hi, tab, (void *) key, 4);
-      // Insert template.
-      key[0] = k0;
-      key[1] = k1;
-      cbt_put_u(tab, t, (void *) key, 4);
-      if (recurselo) insert_template(n0->lo, n1->lo);
-      if (recursehi) insert_template(n0->hi, n1->hi);
+      t->lo = insert_template(n0->lo, n1->lo);
+      t->hi = insert_template(n0->hi, n1->hi);
+      cbt_it_put(it, t);
+      return it;
+    } else if (n0->v < n1->v) {
+      cbt_it it2 = insert_template(n0->lo, k1);
+      cbt_it_put(it, cbt_it_data(it2));
+      return it2;
     } else {
-      printf("TODO: v != w\n");
-      exit(1);
+      cbt_it it2 = insert_template(k0, n1->lo);
+      cbt_it_put(it, cbt_it_data(it2));
+      return it2;
     }
   }
 
@@ -372,7 +369,8 @@ void intersect(uint16_t z0, uint16_t z1) {
   }
   void clear_it(void* data, const char* key) {
     node_template_ptr t = (node_template_ptr) data;
-    if (t != top && t != bot) free(t);
+    uint16_t *k = (uint16_t *) key;
+    if (k[0] == k[1] && t != top && t != bot) free(t);
   }
   cbt_forall(tab, clear_it);
   cbt_clear(tab);
@@ -409,8 +407,9 @@ int main() {
 
   int i;
   global_one_digit_per_box();
-  for (int r = 0; r < 2; r++) {
-    for (i = 1; i <= 1; i++) {
+  for (int r = 0; r < 9; r++) {
+    printf("row %d\n", r);
+    for (i = 1; i <= 9; i++) {
       uint16_t k1 = freenode;
       unique_digit_per_row(i, r);
       intersect(k0, k1);
