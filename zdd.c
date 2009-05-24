@@ -229,6 +229,66 @@ void unique_digit_per_row(int d, int r) {
   freenode = n;
 }
 
+// Construct ZDD of sets containing exactly 1 of the elements in the given list
+// is present in the set. The list is terminated by -1.
+// Generalized version of previous function.
+void unique_digit_in_boxes(int *list) {
+  // The order is determined by sorting by number, then by letter.
+  int n = freenode;
+  int v = 1;
+  int *next = list;
+  while (v <= 729) {
+    if (v == *next) {
+      next++;
+      if (list + 1 == next) {
+	// The first split in the ZDD.
+	set_node(n, v, n + 1, n + 2);
+	n++;
+      } else if (*next >= 1) {
+	// One of the boxes in the middle the list.
+	// If this is the first occurrence, we're on notice.
+	set_node(n, v, n + 2, n + 3);
+	n++;
+	// If we see a second occurrence, then branch to FALSE.
+	set_node(n, v, n + 2, 0);
+	n++;
+      } else {
+	// Last box in the list: -1 == *next.
+	// If we never saw anything from the list, then branch to FALSE.
+	set_node(n, v, 0, n + 2);
+	n++;
+	// If we see a second occurrence, then branch to FALSE.
+	// Otherwise reunite the branches.
+	set_node(n, v, n + 1, 0);
+	n++;
+      }
+    } else if (list == next || *next == -1) {
+      set_node(n, v, n + 1, n + 1);
+      n++;
+    } else {
+      set_node(n, v, n + 2, n + 2);
+      n++;
+      set_node(n, v, n + 2, n + 2);
+      n++;
+    }
+    v++;
+  }
+  // Fix 729, or 729a and 729b.
+  if (pool[n - 2]->hi == n) pool[n - 2]->hi = 1;
+  if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
+  if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
+  freenode = n;
+}
+
+void unique_digit_per_col(int d, int col) {
+  int list[10];
+  for (int i = 0; i < 9; i++) {
+    list[i] = 81 * i + 9 * col + d;
+  }
+  list[9] = -1;
+  unique_digit_in_boxes(list);
+}
+
 void intersect(uint16_t z0, uint16_t z1) {
   struct node_template_s {
     uint16_t v;
@@ -329,6 +389,11 @@ void intersect(uint16_t z0, uint16_t z1) {
       n->v = v;
       n->lo = lo;
       n->hi = hi;
+      if (!(freenode % 10000)) printf("freenode = %d\n", freenode);
+      if (0xffff== freenode) {
+	fprintf(stderr, "pool is full\n");
+	exit(1);
+      }
       return freenode++;
     }
     return (uint16_t) cbt_it_data(it);
@@ -407,11 +472,17 @@ int main() {
 
   int i;
   global_one_digit_per_box();
-  for (int r = 0; r < 9; r++) {
-    printf("row %d\n", r);
-    for (i = 1; i <= 9; i++) {
+  for (i = 1; i <= 1; i++) {
+    printf("rows %d\n", i);
+    for (int r = 0; r < 0; r++) {
       uint16_t k1 = freenode;
       unique_digit_per_row(i, r);
+      intersect(k0, k1);
+    }
+    printf("cols %d\n", i);
+    for (int c = 7; c < 9; c++) {
+      uint16_t k1 = freenode;
+      unique_digit_per_col(i, c);
       intersect(k0, k1);
     }
   }
