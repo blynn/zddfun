@@ -165,20 +165,16 @@ void contains_exactly_one(int *list) {
 	n++;
       } else if (*next >= 1) {
 	// One of the boxes in the middle the list.
+	// Fix previous node.
+	set_node(n - 1, v - 1, n + 2, n + 2);
 	// If this is the first occurrence, we're on notice.
-	set_node(n, v, n + 2, n + 3);
-	n++;
-	// If we see a second occurrence, then branch to FALSE.
-	set_node(n, v, n + 2, 0);
+	set_node(n, v, n + 1, n + 2);
 	n++;
       } else {
 	// Last box in the list: -1 == *next.
 	// If we never saw anything from the list, then branch to FALSE.
-	set_node(n, v, 0, n + 2);
-	n++;
-	// If we see a second occurrence, then branch to FALSE.
 	// Otherwise reunite the branches.
-	set_node(n, v, n + 1, 0);
+	set_node(n, v, 0, n + 1);
 	n++;
       }
     } else if (list == next || *next == -1) {
@@ -192,10 +188,11 @@ void contains_exactly_one(int *list) {
     }
     v++;
   }
-  // Fix 729, or 729a and 729b.
-  if (pool[n - 2]->hi == n) pool[n - 2]->hi = 1;
-  if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
-  if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
+  // Fix last nodes.
+  if (pool[n - 2]->lo >= n) pool[n - 2]->lo = 1;
+  if (pool[n - 2]->hi >= n) pool[n - 2]->hi = 1;
+  if (pool[n - 1]->lo >= n) pool[n - 1]->lo = 1;
+  if (pool[n - 1]->hi >= n) pool[n - 1]->hi = 1;
   freenode = n;
 }
 
@@ -441,7 +438,6 @@ int main() {
 
   darray_t list;
   darray_init(list);
-  /*
   for(int i = 0; i < 9; i++) {
     for(int j = 0; j < 9; j++) {
       int c = getchar();
@@ -467,7 +463,6 @@ int main() {
       exit(1);
     }
   }
-  */
   darray_append(list, (void *) -1);
   contains_all((int *) list->item);
   darray_clear(list);
@@ -487,8 +482,7 @@ int main() {
       intersect(k0, k1);
     }
   }
-  /*
-  for (int i = 1; i <= 3; i++) {
+  for (int i = 1; i <= 9; i++) {
     for (int r = 0; r < 3; r++) {
       for (int c = 0; c < 3; c++) {
 	printf("3x3 %d: %d, %d\n", i, r, c);
@@ -499,7 +493,7 @@ int main() {
       }
     }
   }
-  for (int i = 1; i <= 0; i++) {
+  for (int i = 1; i <= 9; i++) {
     for (int c = 0; c < 9; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);
@@ -508,7 +502,6 @@ int main() {
       intersect(k0, k1);
     }
   }
-  */
 
   for(int i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
