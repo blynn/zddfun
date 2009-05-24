@@ -21,6 +21,18 @@ void set_node(uint16_t n, uint16_t v, uint16_t lo, uint16_t hi) {
   pool[n]->hi = hi;
 }
 
+void pool_swap(uint16_t x, uint16_t y) {
+  struct node_s tmp = *pool[y];
+  *pool[y] = *pool[x];
+  *pool[x] = tmp;
+  for(uint16_t i = 2; i < freenode; i++) {
+    if (pool[i]->lo == x) pool[i]->lo = y;
+    else if (pool[i]->lo == y) pool[i]->lo = x;
+    if (pool[i]->hi == x) pool[i]->hi = y;
+    else if (pool[i]->hi == y) pool[i]->hi = y;
+  }
+}
+
 // Count elements in ZDD rooted at node n.
 void get_count(uint16_t n) {
   if (count[n]) return;
@@ -242,8 +254,14 @@ void intersect(uint16_t z0, uint16_t z1) {
   top->lo = NULL;
   top->n = 1;
 
+  // Naive implementation with two tries. One stores templates, the other
+  // unique nodes. Knuth describes how to do meld using just memory
+  // allocated for a pool of nodes.
   cbt_t tab;
   cbt_init(tab);
+
+  cbt_t node_tab;
+  cbt_init(node_tab);
 
   void insert_template(uint16_t k0, uint16_t k1) {
     uint16_t key[2];
@@ -300,16 +318,40 @@ void intersect(uint16_t z0, uint16_t z1) {
     printf("%d:%d = %d:%d, %d:%d\n", n[0], n[1], l[0], l[1], h[0], h[1]);
   }
 
-  int instantiate(cbt_it it) {
+  uint16_t get_node(uint16_t v, uint16_t lo, uint16_t hi) {
+    // Create or return existing node representing !v ? lo : hi.
+    uint16_t key[3];
+    key[0] = v;
+    key[1] = lo;
+    key[2] = hi;
+    cbt_it it;
+    int just_created = cbt_it_insert_u(&it, node_tab, (void *) key, 6);
+    if (just_created) {
+      cbt_it_put(it, (void *) freenode);
+      node_ptr n = pool[freenode];
+      n->v = v;
+      n->lo = lo;
+      n->hi = hi;
+      return freenode++;
+    }
+    return (uint16_t) cbt_it_data(it);
+  }
+
+  uint16_t instantiate(cbt_it it) {
     node_template_ptr t = (node_template_ptr) cbt_it_data(it);
     // Return if already converted to node.
     if (!t->lo) return t->n;
-    // Convert to node. Take next free node, and recurse.
-    uint16_t r = freenode++;
-    node_ptr n = pool[r];
-    n->v = t->v;
-    n->lo = instantiate(t->lo);
-    n->hi = instantiate(t->hi);
+    // Recurse on LO, HI edges.
+    uint16_t lo = instantiate(t->lo);
+    uint16_t hi = instantiate(t->hi);
+    // Remove HI edges pointing to FALSE.
+    if (!hi) {
+      t->lo = NULL;
+      t->n = lo;
+      return lo;
+    }
+    // Convert to node.
+    uint16_t r = get_node(t->v, lo, hi);
     t->lo = NULL;
     t->n = r;
     return r;
@@ -322,13 +364,20 @@ void intersect(uint16_t z0, uint16_t z1) {
   key[0] = z0;
   key[1] = z1;
   cbt_it it = cbt_it_at_u(tab, (void *) key, 4);
-  instantiate(it);
+  uint16_t root = instantiate(it);
+  if (root < z0) {
+    *pool[z0] = *pool[root];
+  } else if (root > z0)  {
+    pool_swap(z0, root);
+  }
   void clear_it(void* data, const char* key) {
     node_template_ptr t = (node_template_ptr) data;
     if (t != top && t != bot) free(t);
   }
   cbt_forall(tab, clear_it);
   cbt_clear(tab);
+
+  cbt_clear(node_tab);
 }
 
 int main() {
@@ -360,8 +409,8 @@ int main() {
 
   int i;
   global_one_digit_per_box();
-  for (int r = 0; r < 9; r++) {
-    for (i = 1; i <= 6; i++) {
+  for (int r = 0; r < 2; r++) {
+    for (i = 1; i <= 1; i++) {
       uint16_t k1 = freenode;
       unique_digit_per_row(i, r);
       intersect(k0, k1);
