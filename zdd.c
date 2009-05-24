@@ -111,50 +111,28 @@ void one_digit_per_box(int r, int c) {
 // (r, c), starting at pool entry d.
 //
 // The ZDD begins:
-//   1 ... 2a
-//   1 --- 2b
-//   2a ... 3a
-//   2a --- 3b
+//   1 ... 2
+//   1 --- 10
+//   2 ... 3
+//   2 --- 10
 //   ...
-//   9a ... F
-//   9a --- 10
-//
-//   2b ... 3b
-//   2b --- F
-//   3b ... 4b
-//   3b --- F
-//   ...
-//   9b ... 10
-//   9b --- F
+//   9 ... F
+//   9 --- 10
 //
 // and repeats every 10 levels:
-//   10 ... 11a
-//   10 --- 11
-// and so on until 729a --- T, 729b ... T.
+//   10 ... 11
+//   10 --- 19
+// and so on until 729 --- F, 729 ... T.
 //
 // This ZDD has 9^81 members.
 void global_one_digit_per_box() {
-  // The order will be 1, 2a to 9a, 2b to 9b, 10, ...
   int d = freenode;
-  int k;
-  for (k = 0; k < 81; k++) {
-    int i;
-    for (i = 1; i < 9; i++) {
-      // Nodes 9k + 1, 9k + 2a to 9k + 8a.
-      set_node(d, 9 * k + i, d + 1, d + 9);
-      // Nodes 9k + 2b to 9k + 9b.
-      set_node(d + 9, 9 * k + i + 1, d + 9 + 1, 0);
-      d++;
-    }
-    // Node 9k + 9a.
-    set_node(d, 9 * k + i, 0, d + 9);
-    // Node 9k + 9b.
-    set_node(d + 9 - 1, 9 * k + i, d + 9, 0);
-    d += 9;
+  int next = 9;
+  for (int i = 1; i <= 729; i++) {
+    set_node(d, i, (i % 9) ? d + 1 : 0, next < 729 ? freenode + next : 1);
+    if (!(i % 9)) next += 9;
+    d++;
   }
-  // Fix 729a and 729b.
-  pool[d - 1 - 8]->hi = 1;
-  pool[d - 1]->lo = 1;
   freenode = d;
 }
 
@@ -299,8 +277,8 @@ void contains_all(int *list) {
     v++;
   }
   // Fix 729.
-  pool[n - 1]->lo = 1;
-  pool[n - 1]->hi = 1;
+  if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
+  if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
   freenode = n;
 }
 
@@ -361,8 +339,14 @@ void intersect(uint32_t z0, uint32_t z1) {
 
   cbt_it insert_template(uint32_t k0, uint32_t k1) {
     uint32_t key[2];
-    key[0] = k0;
-    key[1] = k1;
+    // Taking advantage of symmetry of intersection appears to help a tiny bit.
+    if (k0 < k1) {
+      key[0] = k0;
+      key[1] = k1;
+    } else {
+      key[0] = k1;
+      key[1] = k0;
+    }
     cbt_it it;
     int just_created = cbt_it_insert_u(&it, tab, (void *) key, 8);
     if (!just_created) return it;
@@ -517,6 +501,7 @@ int main() {
 
   darray_t list;
   darray_init(list);
+  /*
   for(int i = 0; i < 9; i++) {
     for(int j = 0; j < 9; j++) {
       int c = getchar();
@@ -542,6 +527,7 @@ int main() {
       exit(1);
     }
   }
+  */
   darray_append(list, (void *) -1);
   contains_all((int *) list->item);
   darray_clear(list);
@@ -561,8 +547,8 @@ int main() {
       intersect(k0, k1);
     }
   }
-
-  for (int i = 1; i <= 9; i++) {
+  /*
+  for (int i = 1; i <= 3; i++) {
     for (int r = 0; r < 3; r++) {
       for (int c = 0; c < 3; c++) {
 	printf("3x3 %d: %d, %d\n", i, r, c);
@@ -573,7 +559,7 @@ int main() {
       }
     }
   }
-  for (int i = 1; i <= 9; i++) {
+  for (int i = 1; i <= 0; i++) {
     for (int c = 0; c < 9; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);
@@ -582,6 +568,7 @@ int main() {
       intersect(k0, k1);
     }
   }
+  */
 
   for(int i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
