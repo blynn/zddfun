@@ -439,6 +439,7 @@ int main() {
 
   darray_t list;
   darray_init(list);
+  /*
   for(int i = 0; i < 9; i++) {
     for(int j = 0; j < 9; j++) {
       int c = getchar();
@@ -464,6 +465,7 @@ int main() {
       exit(1);
     }
   }
+  */
   darray_append(list, (void *) -1);
   contains_all((int *) list->item);
   darray_clear(list);
@@ -474,27 +476,33 @@ int main() {
 
   // Number of ways you can put nine 1s into a sudoku is
   //   9*6*3*6*3*4*2*2.
+  printf("rows\n");
+  fflush(stdout);
   for (int i = 1; i <= 9; i++) {
-    printf("rows %d\n", i);
-    fflush(stdout);
+    uint32_t k1 = freenode;
     for (int r = 0; r < 9; r++) {
-      uint32_t k1 = freenode;
+      uint32_t k2 = freenode;
       unique_digit_per_row(i, r);
-      intersect(k0, k1);
+      if (r) intersect(k1, k2);
     }
+    intersect(k0, k1);
   }
   for (int i = 1; i <= 9; i++) {
-    for (int r = 0; r < 3; r++) {
-      for (int c = 0; c < 3; c++) {
+    uint32_t k1 = freenode;
+    for (int c = 0; c < 3; c++) {
+      uint32_t k2 = freenode;
+      for (int r = 0; r < 3; r++) {
 	printf("3x3 %d: %d, %d\n", i, r, c);
 	fflush(stdout);
-	uint32_t k1 = freenode;
+	uint32_t k3 = freenode;
 	unique_digit_per_3x3(i, r, c);
-	intersect(k0, k1);
+	if (r) intersect(k2, k3);
       }
+      if (c) intersect(k1, k2);
     }
+    intersect(k0, k1);
   }
-  for (int i = 1; i <= 9; i++) {
+  for (int i = 1; i <= 1; i++) {
     for (int c = 0; c < 9; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);

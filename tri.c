@@ -106,7 +106,7 @@ void contains_all(int *list) {
   int n = freenode;
   int v = 1;
   int *next = list;
-  while (v <= 729) {
+  while (v <= vmax) {
     if (v == *next) {
       next++;
       set_node(n, v, 0, n + 1);
@@ -117,7 +117,6 @@ void contains_all(int *list) {
     }
     v++;
   }
-  // Fix 729.
   if (pool[n - 1]->lo == n) pool[n - 1]->lo = 1;
   if (pool[n - 1]->hi == n) pool[n - 1]->hi = 1;
   freenode = n;
@@ -371,6 +370,7 @@ int main() {
 
   vmax = v - 1;
 
+  /*
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
       void print_it(void *data) {
@@ -382,23 +382,21 @@ int main() {
     }
     printf("\n");
   }
+  */
 
   uint32_t k0 = freenode;
+  uint32_t ni[8];
   for (int i = 0; i < 8; i++) {
+    ni[i] = freenode;
     for (int j = 0; j < 8; j++) {
-      /*
-      void print_it(void *data) {
-	int i = (int) data;
-	printf(" %d", i);
-      }
-      darray_forall(board[i][j], print_it);
-      printf("\n");
-      */
-      printf("%d %d\n", i, j), fflush(stdout);
       uint32_t k1 = freenode;
       contains_exactly_one(board[i][j]);
-      if (k0 != k1) intersect(k0, k1);
+      if (j) intersect(ni[i], k1);
     }
+  }
+  for (int i = 6; i >= 0; i--) {
+    printf("%d\n", i), fflush(stdout);
+    intersect(ni[i], ni[i + 1]);
   }
 
   for(int i = k0; i < freenode; i++) {
