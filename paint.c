@@ -99,7 +99,6 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
 uint32_t compute_col_clue(int col, int *a, int size) {
   uint32_t table[15 + 1][15 + 1];
   uint32_t tail(uint32_t v, uint32_t i) {
-    printf("tail %d %d\n", v, i);
     if (table[i][0] != 0) return table[i][0];
     table[i][0] = freenode;
     if (15 == i) {
@@ -401,12 +400,33 @@ int main() {
     intersect(k0, k1);
   }
 
+  /*
   for(int i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
 
   get_count(k0);
+  */
 
   check_reduced();
+
+  // Assumes there is only one solution.
+  int board[15][15];
+  memset(board, 0, sizeof(int) * 15 * 15);
+  uint32_t v = k0;
+  while(v != 1) {
+    int r = pool[v]->v - 1;
+    int c = r % 15;
+    r /= 15;
+    board[r][c] = 1;
+    v = pool[v]->hi;
+  }
+  for (int i = 0; i < 15; i++) {
+    for (int j = 0; j < 15; j++) {
+      putchar(board[i][j] ? 'X' : '.');
+    }
+    putchar('\n');
+  }
+
   return 0;
 }
