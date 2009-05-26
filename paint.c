@@ -17,7 +17,8 @@ typedef struct node_s node_t[1];
 node_t pool[1<<24];
 uint32_t freenode, POOL_MAX = (1<<24) - 1;
 mpz_ptr count[1<<24];
-uint32_t vmax;
+
+int max;
 
 void set_node(uint32_t n, uint16_t v, uint32_t lo, uint32_t hi) {
   pool[n]->v = v;
@@ -66,10 +67,9 @@ uint32_t add_node(uint32_t v, int offlo, int offhi) {
 }
 
 uint32_t add_row_clue(int row, int *a, int size, int root) {
-  uint32_t v = row * 15 + 1;
-  uint32_t table[15][15 + 1];
+  uint32_t v = row * max + 1;
+  uint32_t table[max][max + 1];
   uint32_t partial_row(uint32_t i, int *a, int count, int sum) {
-    int max = 1 + 15 - count - sum + 1 - i;
     if (table[i][count] != 0) return table[i][count];
     uint32_t first, last;
     first = last = table[i][count] = add_node(v + i, 0, 1);
@@ -81,31 +81,30 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
     } else {
       pool[last]->hi = partial_row(i + *a + 1, a + 1, count - 1, sum - *a);
     }
-    // TODO: Don't need to loop since we recurse.
-    for(int j = 1; j < max; j++) {
-      first = pool[first]->lo = partial_row(i + j, a, count, sum);
+    if (max - count - sum + 1 - i > 0) {
+      pool[first]->lo = partial_row(i + 1, a, count, sum);
     }
     return table[i][count];
   }
 
+  memset(table, 0, sizeof(uint32_t) * max * (max + 1));
   int sum = 0;
   for (int i = 0; i < size; i++) {
-    for (int j = 0; j < 15; j++) table[j][i + 1] = 0;
     sum += a[i]; 
   }
   return partial_row(0, a, size, sum);
 }
 
 uint32_t compute_col_clue(int col, int *a, int size) {
-  uint32_t table[15 + 1][15 + 1];
+  uint32_t table[max + 1][max + 1];
   uint32_t tail(uint32_t v, uint32_t i) {
     if (table[i][0] != 0) return table[i][0];
     table[i][0] = freenode;
-    if (15 == i) {
-      while(v < 15 * 15) add_node(v++, 1, 1);
+    if (max == i) {
+      while(v < max * max) add_node(v++, 1, 1);
       add_node(v, -1, -1);
     } else {
-      while(v < 15 * i + col + 1) add_node(v++, 1, 1);
+      while(v < max * i + col + 1) add_node(v++, 1, 1);
       v++;
       uint32_t last = freenode - 1;
       pool[last]->lo = pool[last]->hi = tail(v, i + 1);
@@ -113,34 +112,33 @@ uint32_t compute_col_clue(int col, int *a, int size) {
     return table[i][0];
   }
   uint32_t partial_col(uint32_t v, uint32_t i, int *a, int count, int sum) {
-    int max = 1 + 15 - count - sum + 1 - i;
     if (table[i][count] != 0) return table[i][count];
     uint32_t first, last;
     table[i][count] = freenode;
-    while(v < col + 1 + i * 15) add_node(v++, 1, 1);
+    while(v < col + 1 + i * max) add_node(v++, 1, 1);
     first = last = add_node(v++, 0, 1);
     uint32_t oldv = v;
     for(int j = 1; j < *a; j++) {
-      while(v < col + 1 + (i + j) * 15) add_node(v++, 1, 1);
+      while(v < col + 1 + (i + j) * max) add_node(v++, 1, 1);
       last = add_node(v++, 0, 1);
     }
     if (1 == count) {
       pool[last]->hi = tail(v, i + *a);
     } else {
-      while(v < col + 1 + (i + *a) * 15) add_node(v++, 1, 1);
+      while(v < col + 1 + (i + *a) * max) add_node(v++, 1, 1);
       v++;
       last = freenode - 1;
       pool[last]->lo = pool[last]->hi =
 	  partial_col(v, i + *a + 1, a + 1, count - 1, sum - *a);
     }
-    if (max > 1) {
+    if (max - count - sum + 1 - i > 0) {
       pool[first]->lo = partial_col(oldv, i + 1, a, count, sum);
     }
     return table[i][count];
   }
 
   int sum = 0;
-  for (int i = 0; i <= 15; i++) for (int j = 0; j <= 15; j++) table[i][j] = 0;
+  for (int i = 0; i <= max; i++) for (int j = 0; j <= max; j++) table[i][j] = 0;
   for (int i = 0; i < size; i++) sum += a[i]; 
   if (!size) return tail(1, 0);
   return partial_col(1, 0, a, size, sum);
@@ -174,7 +172,7 @@ void intersect(uint32_t z0, uint32_t z1) {
   // Naive implementation with two tries. One stores templates, the other
   // unique nodes. Knuth describes how to meld using just memory allocated for
   // a pool of nodes. Briefly, handle duplicates by executing bucket sort level
-  // by level, from the bottom up.
+  // by level from the bottom up.
   cbt_t tab;
   cbt_init(tab);
 
@@ -361,16 +359,20 @@ int main() {
     printf("\n");
   }
   */
-  // Read 15 row clues, then 15 column clues.
-  int clue[15 * 2][15 + 1];
-  for(int i = 0; i < 15 * 2; i++) {
+  if (!scanf("%d\n", &max)) {
+    fprintf(stderr, "input error\n");
+    exit(1);
+  }
+  // Read max row clues, then max column clues.
+  int clue[max * 2][max + 1];
+  for(int i = 0; i < max * 2; i++) {
     char s[80];
     if (!fgets(s, 80, stdin)) {
       fprintf(stderr, "input error\n");
       exit(1);
     }
     char *w = s;
-    for(int j = 0; j < 15; j++) {
+    for(int j = 0; j < max; j++) {
       if (!sscanf(w, "%d", &clue[i][j + 1]) || !clue[i][j + 1]) {
 	clue[i][0] = j;
 	break;
@@ -386,7 +388,7 @@ int main() {
   // Construct ZDD for all row clues.
   uint32_t k0 = freenode;
   uint32_t root = 1;
-  for(int i = 15 - 1; i >= 0; i--) {
+  for(int i = max - 1; i >= 0; i--) {
     if (clue[i][0]) {
       root = add_row_clue(i, &clue[i][1], clue[i][0], root);
     }
@@ -394,9 +396,9 @@ int main() {
   pool_swap(k0, root);
 
   // Intersect each column clue into the ZDD
-  for(int i = 0; i < 15; i++) {
+  for(int i = 0; i < max; i++) {
     uint32_t k1 = freenode;
-    compute_col_clue(i, &clue[i + 15][1], clue[i + 15][0]);
+    compute_col_clue(i, &clue[i + max][1], clue[i + max][0]);
     intersect(k0, k1);
   }
 
@@ -411,18 +413,18 @@ int main() {
   check_reduced();
 
   // Assumes there is only one solution.
-  int board[15][15];
-  memset(board, 0, sizeof(int) * 15 * 15);
+  int board[max][max];
+  memset(board, 0, sizeof(int) * max * max);
   uint32_t v = k0;
   while(v != 1) {
     int r = pool[v]->v - 1;
-    int c = r % 15;
-    r /= 15;
+    int c = r % max;
+    r /= max;
     board[r][c] = 1;
     v = pool[v]->hi;
   }
-  for (int i = 0; i < 15; i++) {
-    for (int j = 0; j < 15; j++) {
+  for (int i = 0; i < max; i++) {
+    for (int j = 0; j < max; j++) {
       putchar(board[i][j] ? 'X' : '.');
     }
     putchar('\n');
