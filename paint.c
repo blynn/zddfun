@@ -64,20 +64,34 @@ uint32_t add_node(uint32_t v, int offlo, int offhi) {
   return freenode++;
 }
 
-void add_row(int a) {
-  int v;
-  uint32_t first, last;
-  for(int i = 1; i + a - 1 <= 15; i++) {
-    v = i;
-    first = last = add_node(v, 0, 1);
-    for(int j = 1; j < a; j++) {
+void add_row_clue(int *a, int size) {
+  uint32_t table[15 + 1][15 + 1];
+  uint32_t add_row(uint32_t v, int *a, int count, int sum) {
+    int max = 1 + 15 - count - sum + 1 - v + 1;
+    if (table[v][count] != 0) return table[v][count];
+    uint32_t first, last;
+    first = last = table[v][count] = add_node(v, 0, 1);
+    for(int j = 1; j < *a; j++) {
       last = add_node(v + j, 0, 1);
     }
-    pool[last]->hi = 1;
-    if (i + a - 1 < 15) {
-      pool[first]->lo = freenode;
+    if (1 == count) {
+      pool[last]->hi = 1;
+    } else {
+      pool[last]->hi = add_row(v + *a + 1, a + 1, count - 1, sum - *a);
     }
+    for(int i = 1; i < max; i++) {
+      first = pool[first]->lo = add_row(v + i, a, count, sum);
+    }
+    printf("A %d %d\n", v, count);
+    return table[v][count];
   }
+
+  int sum = 0;
+  for (int i = 0; i < size; i++) {
+    for (int v = 1; v <= 15; v++) table[v][i + 1] = 0;
+    sum += a[i]; 
+  }
+  add_row(1, a, size, sum);
 }
 
 void intersect(uint32_t z0, uint32_t z1) {
@@ -259,6 +273,15 @@ void check_reduced() {
     } else {
       it->data = (void *) i;
     }
+    if (!pool[i]->hi) {
+      printf("HI -> FALSE: %d\n", i);
+    }
+    if (i == pool[i]->lo) {
+      printf("LO self-loop: %d\n", i);
+    }
+    if (i == pool[i]->hi) {
+      printf("HI self-loop: %d\n", i);
+    }
   }
   cbt_clear(node_tab);
 }
@@ -288,12 +311,15 @@ int main() {
   */
 
   uint32_t k0 = freenode;
-  add_row(8);
+  int a[] = { 3, 3, 4 };
+  add_row_clue(a, sizeof(a)/sizeof(*a));
 
   for(int i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
 
   get_count(k0);
+
+  check_reduced();
   return 0;
 }
