@@ -81,6 +81,7 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
     } else {
       pool[last]->hi = partial_row(i + *a + 1, a + 1, count - 1, sum - *a);
     }
+    // TODO: Don't need to loop since we recurse.
     for(int j = 1; j < max; j++) {
       first = pool[first]->lo = partial_row(i + j, a, count, sum);
     }
@@ -102,14 +103,10 @@ uint32_t compute_col_clue(int col, int *a, int size) {
     if (table[i][0] != 0) return table[i][0];
     table[i][0] = freenode;
     if (15 == i) {
-      while(v < 15 * 15) {
-	add_node(v++, 1, 1);
-      }
+      while(v < 15 * 15) add_node(v++, 1, 1);
       add_node(v, -1, -1);
     } else {
-      while(v < 15 * i + col + 1) {
-	add_node(v++, 1, 1);
-      }
+      while(v < 15 * i + col + 1) add_node(v++, 1, 1);
       v++;
       uint32_t last = freenode - 1;
       pool[last]->lo = pool[last]->hi = tail(v, i + 1);
@@ -131,12 +128,14 @@ uint32_t compute_col_clue(int col, int *a, int size) {
     if (1 == count) {
       pool[last]->hi = tail(v, i + *a);
     } else {
-      while(v < col + 1 + (i + *a)* 15) add_node(v++, 1, 1);
+      while(v < col + 1 + (i + *a) * 15) add_node(v++, 1, 1);
       v++;
-      pool[last]->hi = partial_col(v, i + *a + 1, a + 1, count - 1, sum - *a);
+      last = freenode - 1;
+      pool[last]->lo = pool[last]->hi =
+	  partial_col(v, i + *a + 1, a + 1, count - 1, sum - *a);
     }
-    for(int j = 1; j < max; j++) {
-      first = pool[first]->lo = partial_col(oldv, i + j, a, count, sum);
+    if (max > 1) {
+      pool[first]->lo = partial_col(oldv, i + 1, a, count, sum);
     }
     return table[i][count];
   }
@@ -363,8 +362,9 @@ int main() {
     printf("\n");
   }
   */
-  int row_clue[15][15 + 1];
-  for(int i = 0; i < 15; i++) {
+  // Read 15 row clues, then 15 column clues.
+  int clue[15 * 2][15 + 1];
+  for(int i = 0; i < 15 * 2; i++) {
     char s[80];
     if (!fgets(s, 80, stdin)) {
       fprintf(stderr, "input error\n");
@@ -372,30 +372,34 @@ int main() {
     }
     char *w = s;
     for(int j = 0; j < 15; j++) {
-      if (!sscanf(w, "%d", &row_clue[i][j + 1]) || !row_clue[i][j + 1]) {
-	row_clue[i][0] = j;
+      if (!sscanf(w, "%d", &clue[i][j + 1]) || !clue[i][j + 1]) {
+	clue[i][0] = j;
 	break;
       }
       w = strchr(w + 1, ' ');
       if (!w) {
-	row_clue[i][0] = j + 1;
+	clue[i][0] = j + 1;
 	break;
       }
     }
   }
 
+  // Construct ZDD for all row clues.
   uint32_t k0 = freenode;
   uint32_t root = 1;
   for(int i = 15 - 1; i >= 0; i--) {
-    if (row_clue[i][0]) {
-      root = add_row_clue(i, &row_clue[i][1], row_clue[i][0], root);
+    if (clue[i][0]) {
+      root = add_row_clue(i, &clue[i][1], clue[i][0], root);
     }
   }
   pool_swap(k0, root);
 
-  k0 = freenode;
-  int i = 1;
-  compute_col_clue(i, &row_clue[i][1], row_clue[i][0]);
+  // Intersect each column clue into the ZDD
+  for(int i = 0; i < 15; i++) {
+    uint32_t k1 = freenode;
+    compute_col_clue(i, &clue[i + 15][1], clue[i + 15][0]);
+    intersect(k0, k1);
+  }
 
   for(int i = k0; i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
