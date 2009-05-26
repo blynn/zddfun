@@ -503,13 +503,15 @@ int main() {
     intersect(k0, k1);
   }
   for (int i = 1; i <= 1; i++) {
+    uint32_t k1 = freenode;
     for (int c = 0; c < 9; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);
-      uint32_t k1 = freenode;
+      uint32_t k2 = freenode;
       unique_digit_per_col(i, c);
-      intersect(k0, k1);
+      if (c) intersect(k1, k2);
     }
+    intersect(k0, k1);
   }
 
   for(int i = k0; i < freenode; i++) {
