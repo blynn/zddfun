@@ -96,7 +96,26 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
 }
 
 uint32_t compute_col_clue(int col, int *a, int size) {
-  uint32_t table[15][15 + 1];
+  uint32_t table[15 + 1][15 + 1];
+  uint32_t tail(uint32_t v, uint32_t i) {
+    printf("tail %d %d\n", v, i);
+    if (table[i][0] != 0) return table[i][0];
+    table[i][0] = freenode;
+    if (15 == i) {
+      while(v < 15 * 15) {
+	add_node(v++, 1, 1);
+      }
+      add_node(v, -1, -1);
+    } else {
+      while(v < 15 * i + col + 1) {
+	add_node(v++, 1, 1);
+      }
+      v++;
+      uint32_t last = freenode - 1;
+      pool[last]->lo = pool[last]->hi = tail(v, i + 1);
+    }
+    return table[i][0];
+  }
   uint32_t partial_col(uint32_t v, uint32_t i, int *a, int count, int sum) {
     int max = 1 + 15 - count - sum + 1 - i;
     if (table[i][count] != 0) return table[i][count];
@@ -110,11 +129,7 @@ uint32_t compute_col_clue(int col, int *a, int size) {
       last = add_node(v++, 0, 1);
     }
     if (1 == count) {
-      while(v < 15 * 15) {
-	add_node(v++, 1, 1);
-	if (v % 15 == col + 1) v++;
-      }
-      add_node(v, -1, -1);
+      pool[last]->hi = tail(v, i + *a);
     } else {
       while(v < col + 1 + (i + *a)* 15) add_node(v++, 1, 1);
       v++;
@@ -127,10 +142,9 @@ uint32_t compute_col_clue(int col, int *a, int size) {
   }
 
   int sum = 0;
-  for (int i = 0; i < size; i++) {
-    for (int j = 0; j < 15; j++) table[j][i + 1] = 0;
-    sum += a[i]; 
-  }
+  for (int i = 0; i <= 15; i++) for (int j = 0; j <= 15; j++) table[i][j] = 0;
+  for (int i = 0; i < size; i++) sum += a[i]; 
+  if (!size) return tail(1, 0);
   return partial_col(1, 0, a, size, sum);
 }
 
