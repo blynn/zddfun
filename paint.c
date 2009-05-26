@@ -53,7 +53,7 @@ void get_count(uint32_t n) {
   gmp_printf("%d: %Zd\n", n, count[n]);
 }
 
-void add_node(uint32_t v, int offlo, int offhi) {
+uint32_t add_node(uint32_t v, int offlo, int offhi) {
   int n = freenode;
   uint32_t adjust(int off) {
     if (!off) return 0;
@@ -61,17 +61,21 @@ void add_node(uint32_t v, int offlo, int offhi) {
     return n + off;
   }
   set_node(n, v, adjust(offlo), adjust(offhi));
-  freenode++;
+  return freenode++;
 }
 
 void add_row(int a) {
   int v;
+  uint32_t first, last;
   for(int i = 1; i + a - 1 <= 15; i++) {
     v = i;
-    add_node(v, i + a - 1 == 15 ? 0 : a, 1 == a ? -1 : 1);
+    first = last = add_node(v, 0, 1);
     for(int j = 1; j < a; j++) {
-      v = i + j;
-      add_node(v, 0, j == a - 1 ? -1 : 1);
+      last = add_node(v + j, 0, 1);
+    }
+    pool[last]->hi = 1;
+    if (i + a - 1 < 15) {
+      pool[first]->lo = freenode;
     }
   }
 }
@@ -224,6 +228,7 @@ void intersect(uint32_t z0, uint32_t z1) {
   key[1] = z1;
   cbt_it it = cbt_it_at_u(tab, (void *) key, 8);
   uint32_t root = instantiate(it);
+  // TODO: What if the intersection is node 0 or 1?
   if (root < z0) {
     *pool[z0] = *pool[root];
   } else if (root > z0)  {
