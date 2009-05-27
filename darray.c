@@ -32,10 +32,11 @@ void darray_remove_all(darray_ptr a)
     a->item = malloc(sizeof(void *) * a->max);
 }
 
-void darray_remove_last(darray_ptr a)
+void* darray_remove_last(darray_ptr a)
 {
     assert(a->count > 0);
     a->count--;
+    return(a->item[a->count]);
 }
 
 void darray_realloc(darray_ptr a, int size)

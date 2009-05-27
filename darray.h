@@ -41,7 +41,7 @@ void *darray_at_test(darray_ptr a, int (*test)(void *));
 int darray_index_of(darray_ptr a, void *p);
 int darray_index_of_test(darray_ptr a, int (*test)(void *));
 void darray_remove(darray_ptr a, void *p);
-void darray_remove_last(darray_ptr a);
+void* darray_remove_last(darray_ptr a);
 void darray_remove_test(darray_ptr a, int (*test)(void *));
 void darray_swap(darray_ptr a, int i, int j);
 
