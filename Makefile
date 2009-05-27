@@ -4,7 +4,7 @@ CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc
 
 target: tri
 
-sud: sud.c cbt.c darray.c
+sud: sud.c cbt.c darray.c zdd.c
 
 tri: tri.c cbt.c darray.c zdd.c
 
