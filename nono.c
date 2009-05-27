@@ -8,21 +8,30 @@
 
 static int max;
 
+// Build ZDD for given row clues, and the root of the ZDD for all later rows.
+// Call this from the bottom row to the top row to produce the ZDD of all
+// sets satisfying the row clues.
 uint32_t add_row_clue(int row, int *a, int size, int root) {
   uint32_t v = row * max + 1;
   uint32_t table[max][max + 1];
   uint32_t partial_row(uint32_t i, int *a, int count, int sum) {
+    // Return old result if already computed.
     if (table[i][count] != 0) return table[i][count];
+    // Handle the case when the first coloured segment appears immediately.
     uint32_t first, last;
     first = last = table[i][count] = zdd_add_node(v + i, 0, 1);
     for(int j = 1; j < *a; j++) {
       last = zdd_add_node(v + i + j, 0, 1);
     }
     if (1 == count) {
+      // The last number in the clue for this row.
       zdd_set_hi(last, root);
     } else {
+      // Hop over the next node; it must be false, as it represents a gap
+      // between two coloured segments.
       zdd_set_hi(last, partial_row(i + *a + 1, a + 1, count - 1, sum - *a));
     }
+    // Recurse for all other cases, if applicable.
     if (max - count - sum + 1 - i > 0) {
       zdd_set_lo(first, partial_row(i + 1, a, count, sum));
     }
@@ -39,6 +48,8 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
 
 uint32_t compute_col_clue(int col, int *a, int size) {
   uint32_t table[max + 1][max + 1];
+  // Variables outside this column can be in our out, so until we reach
+  // the last node we send both edges to the next node.
   uint32_t tail(uint32_t v, uint32_t i) {
     if (table[i][0] != 0) return table[i][0];
     table[i][0] = zdd_next_node();
@@ -46,6 +57,9 @@ uint32_t compute_col_clue(int col, int *a, int size) {
       while(v < max * max) zdd_add_node(v++, 1, 1);
       zdd_add_node(v, -1, -1);
     } else {
+      // Keep adding nodes until we reach this column again. Hop over the
+      // next node because it is part of the blank space after the last
+      // coloured segment in this column.
       while(v < max * i + col + 1) zdd_add_node(v++, 1, 1);
       v++;
       uint32_t last = zdd_last_node();
@@ -57,6 +71,7 @@ uint32_t compute_col_clue(int col, int *a, int size) {
     if (table[i][count] != 0) return table[i][count];
     uint32_t first, last;
     table[i][count] = zdd_next_node();
+    // Variables outside this column can be in our out.
     while(v < col + 1 + i * max) zdd_add_node(v++, 1, 1);
     first = last = zdd_add_node(v++, 0, 1);
     uint32_t oldv = v;
@@ -133,13 +148,6 @@ int main() {
     zdd_intersection();
     //printf("intersected: %d\n", freenode - k0);
   }
-
-  /*
-  for(int i = k0; i < freenode; i++) {
-    printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
-  }
-  get_count(k0);
-  */
 
   zdd_check();
 

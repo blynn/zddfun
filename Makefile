@@ -6,6 +6,6 @@ target: tri
 
 sud: sud.c cbt.c darray.c
 
-tri: tri.c cbt.c darray.c
+tri: tri.c cbt.c darray.c zdd.c
 
 nono: nono.c cbt.c darray.c zdd.c

@@ -1,4 +1,4 @@
-// ZDD library.
+// ZDD stack-based calculator library.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,9 +32,9 @@ void set_node(uint32_t n, uint16_t v, uint32_t lo, uint32_t hi) {
 uint32_t zdd_v(uint32_t n) { return pool[n]->v; }
 uint32_t zdd_hi(uint32_t n) { return pool[n]->hi; }
 uint32_t zdd_lo(uint32_t n) { return pool[n]->lo; }
-uint32_t zdd_set_lo(uint32_t n, uint16_t lo) { return pool[n]->lo = lo; }
-uint32_t zdd_set_hi(uint32_t n, uint16_t hi) { return pool[n]->hi = hi; }
-uint32_t zdd_set_hilo(uint32_t n, uint16_t hilo) {
+uint32_t zdd_set_lo(uint32_t n, uint32_t lo) { return pool[n]->lo = lo; }
+uint32_t zdd_set_hi(uint32_t n, uint32_t hi) { return pool[n]->hi = hi; }
+uint32_t zdd_set_hilo(uint32_t n, uint32_t hilo) {
   return pool[n]->lo = pool[n]->hi = hilo;
 }
 uint32_t zdd_next_node() { return freenode; }
@@ -53,14 +53,14 @@ static void pool_swap(uint32_t x, uint32_t y) {
 }
 
 uint32_t zdd_root() { return (uint32_t) darray_last(stack); }
-uint32_t zdd_set_root(uint16_t root) {
+uint32_t zdd_set_root(uint32_t root) {
   uint32_t i = zdd_root();
   if (i != root) pool_swap(i, root);
   return i;
 }
 
 // Count elements in ZDD rooted at node n.
-void get_count(uint32_t n) {
+static void get_count(uint32_t n) {
   if (count[n]) return;
   count[n] = malloc(sizeof(mpz_t));
   mpz_init(count[n]);
@@ -74,6 +74,10 @@ void get_count(uint32_t n) {
   if (!count[y]) get_count(y);
   mpz_add(count[n], count[x], count[y]);
   gmp_printf("%d: %Zd\n", n, count[n]);
+}
+
+void zdd_count() {
+  get_count(zdd_root());
 }
 
 uint32_t zdd_add_node(uint32_t v, int offlo, int offhi) {
@@ -292,4 +296,10 @@ void zdd_init() {
   pool[1]->hi = 1;
   freenode = 2;
   darray_init(stack);
+}
+
+void zdd_dump() {
+  for(uint32_t i = (uint32_t) darray_last(stack); i < freenode; i++) {
+    printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
+  }
 }
