@@ -1,11 +1,10 @@
-// Paint-by-numbers solver.
+// Nonogram solver.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <gmp.h>
 #include "cbt.h"
-#include "darray.h"
 
 struct node_s {
   uint16_t v;
@@ -90,7 +89,7 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
   memset(table, 0, sizeof(uint32_t) * max * (max + 1));
   int sum = 0;
   for (int i = 0; i < size; i++) {
-    sum += a[i]; 
+    sum += a[i];
   }
   return partial_row(0, a, size, sum);
 }
@@ -139,7 +138,7 @@ uint32_t compute_col_clue(int col, int *a, int size) {
 
   int sum = 0;
   for (int i = 0; i <= max; i++) for (int j = 0; j <= max; j++) table[i][j] = 0;
-  for (int i = 0; i < size; i++) sum += a[i]; 
+  for (int i = 0; i < size; i++) sum += a[i];
   if (!size) return tail(1, 0);
   return partial_col(1, 0, a, size, sum);
 }
@@ -395,11 +394,14 @@ int main() {
   }
   pool_swap(k0, root);
 
+  //printf("all rows: %d\n", freenode - k0);
   // Intersect each column clue into the ZDD
   for(int i = 0; i < max; i++) {
     uint32_t k1 = freenode;
     compute_col_clue(i, &clue[i + max][1], clue[i + max][0]);
+    //printf("column %d: %d\n", i, freenode - k1);
     intersect(k0, k1);
+    //printf("intersected: %d\n", freenode - k0);
   }
 
   /*

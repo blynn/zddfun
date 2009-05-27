@@ -504,7 +504,7 @@ int main() {
   }
   for (int i = 1; i <= 1; i++) {
     uint32_t k1 = freenode;
-    for (int c = 0; c < 9; c++) {
+    for (int c = 0; c < 1; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);
       uint32_t k2 = freenode;
