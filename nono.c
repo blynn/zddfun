@@ -48,6 +48,7 @@ uint32_t add_row_clue(int row, int *a, int size, int root) {
 
 uint32_t compute_col_clue(int col, int *a, int size) {
   uint32_t table[max + 1][max + 1];
+  memset(table, 0, sizeof(uint32_t) * (max + 1) * (max + 1));
   // Variables outside this column can be in our out, so until we reach
   // the last node we send both edges to the next node.
   uint32_t tail(uint32_t v, uint32_t i) {
@@ -139,14 +140,14 @@ int main() {
   }
   zdd_set_root(root);
 
-  //printf("all rows: %d\n", freenode - k0);
+  //printf("all rows: %d\n", zdd_next_node());
   // Intersect each column clue into the ZDD
   for(int i = 0; i < max; i++) {
     zdd_push();
     compute_col_clue(i, &clue[i + max][1], clue[i + max][0]);
-    //printf("column %d: %d\n", i, freenode - k1);
+    //printf("column %d: %d\n", i, zdd_next_node());
     zdd_intersection();
-    //printf("intersected: %d\n", freenode - k0);
+    //printf("intersected: %d\n", zdd_next_node());
   }
 
   zdd_check();
