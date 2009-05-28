@@ -274,7 +274,7 @@ int main() {
 	  }
 	  zdd_intersection();
 	  break;
-	case 0:
+	case 0 ... 4:
 	  darray_remove_all(a);
 	  void check(int r, int c) {
 	    if (r >= 0 && r < rcount && c >= 0 && c < ccount
@@ -286,21 +286,12 @@ int main() {
 	  check(i, j - 1);
 	  check(i, j + 1);
 	  check(i + 1, j);
-void outwithit(void *data) {
-  printf(" %d", (int) data);
-}
-printf("%d %d:", i, j);
-darray_forall(a, outwithit); printf("\n");
 	  zdd_push();
-          //contains_none(a);
-          contains_exactly_n(a, 0);
+          contains_exactly_n(a, board[i][j]);
 	  zdd_intersection();
       }
     }
   }
-
-  zdd_dump();
-  zdd_count();
 
   // Print lexicographically largest solution, assuming it exists.
   uint32_t v = zdd_root();
