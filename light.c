@@ -80,10 +80,11 @@ void contains_at_most_one(darray_t a) {
   uint32_t n1 = zdd_next_node();
   zdd_set_hi(n + v, n1);
   v++;
+  uint32_t last = 0;
   for(int i = 1; i < darray_count(a); i++) {
     int v1 = (int) darray_at(a, i);
     while(v < v1) {
-      zdd_add_node(v++, 1, 1);
+      last = zdd_add_node(v++, 1, 1);
     }
     zdd_set_hi(n + v, zdd_next_node());
     v++;
@@ -96,7 +97,6 @@ void contains_at_most_one(darray_t a) {
     zdd_set_hi(n + v1, n + v);
   }
 
-printf("d0 %d %d\n", vmax, v);
   if (vmax < v) {
     // Special case: list ends with vmax. Especially troublesome if there's
     // a little sequence, e.g. vmax - 2, vmax - 1, vmax.
@@ -110,7 +110,8 @@ printf("d0 %d %d\n", vmax, v);
     return;
   }
 
-  zdd_set_hilo(zdd_last_node(), n + v);
+  // Rejoin main branch.
+  if (last) zdd_set_hilo(last, n + v);
 }
 
 // Construct ZDD of sets not containing any elements from the given list.
@@ -219,6 +220,15 @@ darray_forall(a, outwithit); printf("\n");
 	    zdd_intersection();
 	  }
 	  // Similarly for columns.
+	  if (c0 == j) {
+	    darray_remove_all(a);
+	    for(int k = j; k < ccount && board[i][k] == -1; k++) {
+	      darray_append(a, (void *) getv(i, k));
+	    }
+	    zdd_push();
+	    contains_at_most_one(a);
+	    zdd_intersection();
+	  }
 	  zdd_intersection();
 	  break;
       }
@@ -227,5 +237,34 @@ darray_forall(a, outwithit); printf("\n");
 
   zdd_dump();
   zdd_count();
+
+  // Print lexicographically largest solution, assuming it exists.
+  uint32_t v = zdd_root();
+  while(v != 1) {
+    int r = zdd_v(v) - 1;
+    int c = r % ccount;
+    r /= ccount;
+    board[r][c] = -3;
+    v = zdd_hi(v);
+  }
+  for (int i = 0; i < rcount; i++) {
+    for (int j = 0; j < ccount; j++) {
+      switch(board[i][j]) {
+	case -3:
+	  putchar('*');
+	  break;
+	case -2:
+	  putchar('x');
+	  break;
+	case -1:
+	  putchar('.');
+	  break;
+	default:
+	  putchar('0' + board[i][j]);
+	  break;
+      }
+    }
+    putchar('\n');
+  }
   return 0;
 }

@@ -151,7 +151,7 @@ int main() {
 
   zdd_check();
 
-  // Assumes there is only one solution.
+  // Print lexicographically largest solution, assuming it exists.
   int board[max][max];
   memset(board, 0, sizeof(int) * max * max);
   uint32_t v = zdd_root();
