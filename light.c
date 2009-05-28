@@ -58,11 +58,92 @@ void contains_at_least_one(darray_t a) {
   if (vmax < v) zdd_set_hi(zdd_last_node(), 1);
 }
 
+// Construct ZDD of sets containing at most 1 of the elements in the given
+// list.
+void contains_at_most_one(darray_t a) {
+  uint32_t n = zdd_last_node();
+  // Start with ZDD of all sets.
+  int v = 1;
+  while(v < vmax) {
+    zdd_add_node(v++, 1, 1);
+  }
+  zdd_add_node(v, -1, -1);
+  // If there is nothing or only one element in the list then we are done.
+  if (darray_count(a) <= 1) return;
+
+  // At this point, there are at least two elements in the list.
+  // Construct new branch for when elements of the list are detected. We
+  // branch off at the first element, then hop over all remaining elements,
+  // then rejoin.
+  v = (int) darray_first(a);
+
+  uint32_t n1 = zdd_next_node();
+  zdd_set_hi(n + v, n1);
+  v++;
+  for(int i = 1; i < darray_count(a); i++) {
+    int v1 = (int) darray_at(a, i);
+    while(v < v1) {
+      zdd_add_node(v++, 1, 1);
+    }
+    zdd_set_hi(n + v, zdd_next_node());
+    v++;
+  }
+  // v = last element of list + 1
+
+  // The HI edges of the last element of the list, and more generally, the last
+  // sequence of the list must be corrected.
+  for(int v1 = (int) darray_last(a); zdd_hi(n + v1) == zdd_next_node(); v1--) {
+    zdd_set_hi(n + v1, n + v);
+  }
+
+printf("d0 %d %d\n", vmax, v);
+  if (vmax < v) {
+    // Special case: list ends with vmax. Especially troublesome if there's
+    // a little sequence, e.g. vmax - 2, vmax - 1, vmax.
+    for(v = vmax; zdd_hi(n + v) > n + vmax; v--) {
+      zdd_set_hi(n + v, 1);
+    }
+    // The following line is only needed if we added any nodes to the branch,
+    // but is harmless if we execute it unconditionally since the last node
+    // to be added was (!vmax ? 1 : 1).
+    zdd_set_hilo(zdd_last_node(), 1);
+    return;
+  }
+
+  zdd_set_hilo(zdd_last_node(), n + v);
+}
+
+// Construct ZDD of sets not containing any elements from the given list.
+// Assumes not every variable is on the list.
+void contains_none(darray_t a) {
+  int i = 1;
+  int v1 = darray_is_empty(a) ? -1 : (int) darray_first(a);
+  for(int v = 1; v <= vmax; v++) {
+    if (v1 == v) {
+      if (i < darray_count(a)) {
+	v1 = (int) darray_at(a, i++);
+      } else {
+	v1 = -1;
+      }
+    } else {
+      zdd_add_node(v, 1, 1);
+    }
+  }
+  uint32_t n = zdd_last_node();
+  zdd_set_lo(n, 1);
+  zdd_set_hi(n, 1);
+}
+
 int main() {
   zdd_init();
 
   if (!scanf("%d %d\n", &rcount, &ccount)) die("input error");
   int board[rcount][ccount];
+  uint32_t getv(uint32_t i, uint32_t j) { return ccount * i + j + 1; }
+  vmax = getv(rcount - 1, ccount - 1);
+  darray_t a;
+  darray_init(a);
+
   for (int i = 0; i < rcount; i++) {
     int c;
     for (int j = 0; j < ccount; j++) {
@@ -75,9 +156,11 @@ int main() {
 	    break;
 	  case 'X':
 	  case 'x':
+	    darray_append(a, (void *) getv(i, j));
 	    return -2;
 	    break;
 	  case '0' ... '4':
+	    darray_append(a, (void *) getv(i, j));
 	    return c - '0';
 	    break;
 	}
@@ -88,33 +171,34 @@ int main() {
     c = getchar();
     if (c != '\n') die("input error");
   }
-  darray_t a;
-  darray_init(a);
-  int flag = 0;
-  uint32_t getv(uint32_t i, uint32_t j) { return ccount * i + j + 1; }
-  vmax = getv(rcount - 1, ccount - 1);
+  zdd_push();
+  // Instead of constructing a ZDD excluding particular elements, we could
+  // reduce the number of variables, but then we need to record which variable
+  // represents which square.
+  contains_none(a);
 
   for (uint32_t i = 0; i < rcount; i++) {
     for (uint32_t j = 0; j < ccount; j++) {
       switch(board[i][j]) {
-	//case -2:
 	case -1:
       printf("%d %d\n", i, j);
+	  // There must be at least one light bulb in this square or a
+	  // square reachable in one rook move.
 	  darray_remove_all(a);
-	  int k;
-	  for(k = i - 1; k >= 0 && board[k][j] == -1; k--);
-	  for(k++; k != i; k++) {
+	  int r0, c0;
+	  for(r0 = i; r0 > 0 && board[r0 - 1][j] == -1; r0--);
+	  for(int k = r0; k != i; k++) {
 	    darray_append(a, (void *) getv(k, j));
 	  }
-	  for(k = j - 1; k >= 0 && board[i][k] == -1; k--);
-	  for(k++; k != j; k++) {
+	  for(c0 = j; c0 > 0 && board[i][c0 - 1] == -1; c0--);
+	  for(int k = c0; k != j; k++) {
 	    darray_append(a, (void *) getv(i, k));
 	  }
 	  darray_append(a, (void *) getv(i, j));
-	  for(k = j + 1; k < ccount && board[i][k] == -1; k++) {
+	  for(int k = j + 1; k < ccount && board[i][k] == -1; k++) {
 	    darray_append(a, (void *) getv(i, k));
 	  }
-	  for(k = i + 1; k < rcount && board[k][j] == -1; k++) {
+	  for(int k = i + 1; k < rcount && board[k][j] == -1; k++) {
 	    darray_append(a, (void *) getv(k, j));
 	  }
 void outwithit(void *data) {
@@ -123,7 +207,19 @@ void outwithit(void *data) {
 darray_forall(a, outwithit); printf("\n");
 	  zdd_push();
 	  contains_at_least_one(a);
-	  if (flag) zdd_intersection(); else flag = 1;
+	  // There is at most one light bulb in this row. We record this when
+	  // we first enter the row.
+	  if (r0 == i) {
+	    darray_remove_all(a);
+	    for(int k = i; k < rcount && board[k][j] == -1; k++) {
+	      darray_append(a, (void *) getv(k, j));
+	    }
+	    zdd_push();
+	    contains_at_most_one(a);
+	    zdd_intersection();
+	  }
+	  // Similarly for columns.
+	  zdd_intersection();
 	  break;
       }
     }
