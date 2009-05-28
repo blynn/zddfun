@@ -17,6 +17,7 @@ uint32_t zdd_set_lo(uint32_t n, uint32_t lo);
 uint32_t zdd_set_hilo(uint32_t n, uint32_t hilo);
 uint32_t zdd_set_root(uint32_t root);
 uint32_t zdd_add_node(uint32_t v, int offlo, int offhi);
+uint32_t zdd_abs_node(uint32_t v, uint32_t lo, uint32_t hi);
 uint32_t zdd_last_node();
 uint32_t zdd_next_node();
 void zdd_count();

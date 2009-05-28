@@ -80,6 +80,11 @@ void zdd_count() {
   get_count(zdd_root());
 }
 
+uint32_t zdd_abs_node(uint32_t v, uint32_t lo, uint32_t hi) {
+  set_node(freenode, v, lo, hi);
+  return freenode++;
+}
+
 uint32_t zdd_add_node(uint32_t v, int offlo, int offhi) {
   int n = freenode;
   uint32_t adjust(int off) {

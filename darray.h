@@ -66,6 +66,11 @@ static inline int darray_is_empty(darray_ptr a)
     return !a->count;
 }
 
+static inline void *darray_first(darray_t a)
+{
+    return a->item[0];
+}
+
 static inline void *darray_last(darray_t a)
 {
     return a->item[a->count - 1];
