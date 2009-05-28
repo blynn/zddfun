@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
@@ -23,6 +24,53 @@ void die(const char *err, ...) {
 
 uint32_t rcount, ccount;
 uint32_t vmax;
+
+// Construct ZDD of sets containing exactly n of the elements in the
+// given list.
+void contains_exactly_n(darray_t a, int n) {
+  uint32_t tab[darray_count(a)][n + 1];
+  memset(tab, 0, darray_count(a) * (n + 1) * sizeof(uint32_t));
+  uint32_t recurse(int i, int n) {
+    int v = -1 == i ? 1 : (int) darray_at(a, i) + 1;
+    uint32_t root;
+    if (i == darray_count(a) - 1) {
+      // n is irrelevant when we reach the end of the list.
+      if (-1 != i && tab[i][0]) return tab[i][0];
+      if (vmax < v) {
+	root = 1;
+      } else {
+        root = zdd_next_node();
+	while(v < vmax) zdd_add_node(v++, 1, 1);
+	zdd_add_node(v, -1, -1);
+      }
+      if (-1 != i) tab[i][0] = root;
+      return root;
+    }
+    if (-1 != i && tab[i][n]) return tab[i][n];
+    int v1 = (int) darray_at(a, i + 1);
+    int is_empty = v == v1;
+    root = zdd_next_node();
+    while(v < v1) zdd_add_node(v++, 1, 1);
+    if (!n) {
+      if (is_empty) {
+	root = recurse(i + 1, n);
+      } else {
+	uint32_t last = zdd_last_node();
+	zdd_set_hilo(last, recurse(i + 1, n));
+      }
+      if (-1 != i) tab[i][n] = root;
+      return root;
+    }
+    uint32_t last = zdd_add_node(v, 0, 0);
+    zdd_set_hi(last, recurse(i + 1, n - 1));
+    if (n < darray_count(a) - i - 1) {
+      zdd_set_lo(last, recurse(i + 1, n));
+    }
+    if (-1 != i) tab[i][n] = root;
+    return root;
+  }
+  recurse(-1, n);
+}
 
 // Construct ZDD of sets containing at least 1 of the elements in the
 // given list.
@@ -182,7 +230,6 @@ int main() {
     for (uint32_t j = 0; j < ccount; j++) {
       switch(board[i][j]) {
 	case -1:
-      printf("%d %d\n", i, j);
 	  // There must be at least one light bulb in this square or a
 	  // square reachable in one rook move.
 	  darray_remove_all(a);
@@ -202,10 +249,6 @@ int main() {
 	  for(int k = i + 1; k < rcount && board[k][j] == -1; k++) {
 	    darray_append(a, (void *) getv(k, j));
 	  }
-void outwithit(void *data) {
-  printf(" %d", (int) data);
-}
-darray_forall(a, outwithit); printf("\n");
 	  zdd_push();
 	  contains_at_least_one(a);
 	  // There is at most one light bulb in this row. We record this when
@@ -231,6 +274,27 @@ darray_forall(a, outwithit); printf("\n");
 	  }
 	  zdd_intersection();
 	  break;
+	case 0:
+	  darray_remove_all(a);
+	  void check(int r, int c) {
+	    if (r >= 0 && r < rcount && c >= 0 && c < ccount
+		&& board[r][c] == -1) {
+	      darray_append(a, (void *) getv(r, c));
+	    }
+	  }
+	  check(i - 1, j);
+	  check(i, j - 1);
+	  check(i, j + 1);
+	  check(i + 1, j);
+void outwithit(void *data) {
+  printf(" %d", (int) data);
+}
+printf("%d %d:", i, j);
+darray_forall(a, outwithit); printf("\n");
+	  zdd_push();
+          //contains_none(a);
+          contains_exactly_n(a, 0);
+	  zdd_intersection();
       }
     }
   }
