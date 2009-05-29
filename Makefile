@@ -2,12 +2,16 @@
 
 CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc
 
-target: light
+ZDD:=cbt.c darray.c zdd.c
 
-sud: sud.c cbt.c darray.c zdd.c
+target: fill
 
-tri: tri.c cbt.c darray.c zdd.c
+sud: sud.c $(ZDD)
 
-nono: nono.c cbt.c darray.c zdd.c
+tri: tri.c $(ZDD)
 
-light: light.c cbt.c darray.c zdd.c
+nono: nono.c $(ZDD)
+
+light: light.c $(ZDD)
+
+fill: fill.c $(ZDD)

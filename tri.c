@@ -11,6 +11,7 @@ uint32_t vmax;
 // Construct ZDD of sets containing exactly 1 of the elements in the given list.
 // Zero suppression means we must treat sequences in the list carefully.
 void contains_exactly_one(darray_t a) {
+  zdd_push();
   int v = 1;
   int i = 0;
   while(v <= vmax) {
@@ -138,7 +139,6 @@ int main() {
   */
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      zdd_push();
       contains_exactly_one(board[i][j]);
       if (j) zdd_intersection();
     }

@@ -28,6 +28,7 @@ uint32_t vmax;
 // Construct ZDD of sets containing exactly n of the elements in the
 // given list.
 void contains_exactly_n(darray_t a, int n) {
+  zdd_push();
   uint32_t tab[darray_count(a)][n + 1];
   memset(tab, 0, darray_count(a) * (n + 1) * sizeof(uint32_t));
   uint32_t recurse(int i, int n) {
@@ -109,6 +110,7 @@ void contains_at_least_one(darray_t a) {
 // Construct ZDD of sets containing at most 1 of the elements in the given
 // list.
 void contains_at_most_one(darray_t a) {
+  zdd_push();
   uint32_t n = zdd_last_node();
   // Start with ZDD of all sets.
   int v = 1;
@@ -165,6 +167,7 @@ void contains_at_most_one(darray_t a) {
 // Construct ZDD of sets not containing any elements from the given list.
 // Assumes not every variable is on the list.
 void contains_none(darray_t a) {
+  zdd_push();
   int i = 1;
   int v1 = darray_is_empty(a) ? -1 : (int) darray_first(a);
   for(int v = 1; v <= vmax; v++) {
@@ -220,13 +223,14 @@ int main() {
     c = getchar();
     if (c != '\n') die("input error");
   }
-  zdd_push();
   // Instead of constructing a ZDD excluding particular elements, we could
   // reduce the number of variables, but then we need to record which variable
   // represents which square.
   contains_none(a);
 
   for (uint32_t i = 0; i < rcount; i++) {
+    darray_remove_all(a);
+    contains_at_most_one(a);
     for (uint32_t j = 0; j < ccount; j++) {
       switch(board[i][j]) {
 	case -1:
@@ -258,7 +262,6 @@ int main() {
 	    for(int k = i; k < rcount && board[k][j] == -1; k++) {
 	      darray_append(a, (void *) getv(k, j));
 	    }
-	    zdd_push();
 	    contains_at_most_one(a);
 	    zdd_intersection();
 	  }
@@ -268,7 +271,6 @@ int main() {
 	    for(int k = j; k < ccount && board[i][k] == -1; k++) {
 	      darray_append(a, (void *) getv(i, k));
 	    }
-	    zdd_push();
 	    contains_at_most_one(a);
 	    zdd_intersection();
 	  }
@@ -286,11 +288,11 @@ int main() {
 	  check(i, j - 1);
 	  check(i, j + 1);
 	  check(i + 1, j);
-	  zdd_push();
           contains_exactly_n(a, board[i][j]);
 	  zdd_intersection();
       }
     }
+    zdd_intersection();
   }
 
   // Print lexicographically largest solution, assuming it exists.
