@@ -56,7 +56,7 @@ void darray_forall(darray_t a, void (*func)(void *));
 /*@manual darray
 Returns the number of pointers held in ''a''.
 */
-static inline int darray_count(darray_ptr a)
+static inline int darray_count(const darray_ptr a)
 {
     return a->count;
 }
@@ -66,7 +66,7 @@ static inline int darray_set_count(darray_ptr a, int n)
     return a->count = n;
 }
 
-static inline int darray_is_empty(darray_ptr a)
+static inline int darray_is_empty(const darray_ptr a)
 {
     return !a->count;
 }

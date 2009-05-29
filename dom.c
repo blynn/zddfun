@@ -159,17 +159,20 @@ int main() {
     }
   }
   vmax = v - 1;
+
   for(int i = 0; i < rcount; i++) {
     for(int j = 0; j < ccount; j++) {
       contains_exactly_one(list[i][j]);
-      if (j) zdd_intersection();
+      if (i || j) zdd_intersection();
     }
   }
-  for(int i = 0; i < rcount - 1; i++) {
-    zdd_intersection();
-  }
 
+  int compar(const void *a, const void *b) {
+    return darray_count(a) > darray_count(b);
+  }
+  qsort(tally, n, sizeof(darray_t), compar);
   for(int i = 0; i < n; i++) {
+    //printf("%d/%d\n", i + 1, n);
     contains_exactly_one(tally[i]);
     zdd_intersection();
   }
