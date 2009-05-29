@@ -171,9 +171,8 @@ int main() {
 
   for(int i = 0; i < n; i++) {
     contains_exactly_one(tally[i]);
-    if (i) zdd_intersection();
+    zdd_intersection();
   }
-  zdd_intersection();
 
   // Print lexicographically largest solution, assuming it exists.
   char pic[2 * rcount + 1][2 * ccount + 1];
