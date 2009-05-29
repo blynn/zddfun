@@ -15,3 +15,5 @@ nono: nono.c $(ZDD)
 light: light.c $(ZDD)
 
 fill: fill.c $(ZDD)
+
+dom: dom.c $(ZDD)

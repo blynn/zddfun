@@ -1,4 +1,4 @@
-// Solve a Fillomino puzzle
+// Solve a Fillomino puzzle.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -88,10 +88,6 @@ int main() {
   if (!scanf("%d %d\n", &rcount, &ccount)) die("input error");
   int board[rcount][ccount];
   darray_t list[rcount][ccount];
-  uint32_t getv(uint32_t i, uint32_t j) { return ccount * i + j + 1; }
-  vmax = getv(rcount - 1, ccount - 1);
-  darray_t a;
-  darray_init(a);
 
   for (int i = 0; i < rcount; i++) {
     int c;
@@ -126,24 +122,11 @@ int main() {
   darray_init(r);
   darray_init(c);
   darray_init(growth);
-  void grr() {
-  for (int i = 0; i < rcount; i++) {
-    for (int j = 0; j < ccount; j++) {
-      printf("%d %d:", i, j);
-      void dump(void *data) {
-	printf(" %d", (int) data);
-      }
-      darray_forall(list[i][j], dump);
-      printf("\n");
-    }
-  }
-  }
   for (int i = 0; i < rcount; i++) {
     for (int j = 0; j < ccount; j++) {
       int n = board[i][j];
       if (n) {
-	// Scratch only needs to be a bit field, but it's current form is good
-	// for debugging.
+	// We store more information than we need in scratch for debugging.
 	int scratch[rcount][ccount];
 	memset(scratch, 0, rcount * ccount * sizeof(int));
 	scratch[i][j] = -1;
