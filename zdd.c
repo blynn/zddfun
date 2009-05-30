@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <gmp.h>
-#include "cbt.h"
+#include "memo.h"
 #include "darray.h"
 #include "zdd.h"
 
@@ -103,10 +103,10 @@ uint32_t zdd_intersection() {
     uint16_t v;
     // NULL means this template have been instantiated.
     // Otherwise it points to the LO template.
-    cbt_it lo;
+    memo_it lo;
     union {
       // Points to HI template when template is not yet instantiated.
-      cbt_it hi;
+      memo_it hi;
       // During template instantiation we set n to the pool index
       // of the newly created node.
       uint32_t n;
@@ -127,13 +127,13 @@ uint32_t zdd_intersection() {
   // unique nodes. Knuth describes how to meld using just memory allocated for
   // a pool of nodes. Briefly, handle duplicates by executing bucket sort level
   // by level from the bottom up.
-  cbt_t tab;
-  cbt_init(tab);
+  memo_t tab;
+  memo_init(tab);
 
-  cbt_t node_tab;
-  cbt_init(node_tab);
+  memo_t node_tab;
+  memo_init(node_tab);
 
-  cbt_it insert_template(uint32_t k0, uint32_t k1) {
+  memo_it insert_template(uint32_t k0, uint32_t k1) {
     uint32_t key[2];
     // Taking advantage of symmetry of intersection appears to help a tiny bit.
     if (k0 < k1) {
@@ -143,15 +143,15 @@ uint32_t zdd_intersection() {
       key[0] = k1;
       key[1] = k0;
     }
-    cbt_it it;
-    int just_created = cbt_it_insert_u(&it, tab, (void *) key, 8);
+    memo_it it;
+    int just_created = memo_it_insert_u(&it, tab, (void *) key, 8);
     if (!just_created) return it;
     if (!k0 || !k1) {
-      cbt_it_put(it, bot);
+      memo_it_put(it, bot);
       return it;
     }
     if (k0 == 1 && k1 == 1) {
-      cbt_it_put(it, top);
+      memo_it_put(it, top);
       return it;
     }
     node_ptr n0 = pool[k0];
@@ -165,15 +165,15 @@ uint32_t zdd_intersection() {
 	t->lo = insert_template(n0->lo, n1->lo);
 	t->hi = insert_template(n0->hi, n1->hi);
       }
-      cbt_it_put(it, t);
+      memo_it_put(it, t);
       return it;
     } else if (n0->v < n1->v) {
-      cbt_it it2 = insert_template(n0->lo, k1);
-      cbt_it_put(it, cbt_it_data(it2));
+      memo_it it2 = insert_template(n0->lo, k1);
+      memo_it_put(it, memo_it_data(it2));
       return it2;
     } else {
-      cbt_it it2 = insert_template(k0, n1->lo);
-      cbt_it_put(it, cbt_it_data(it2));
+      memo_it it2 = insert_template(k0, n1->lo);
+      memo_it_put(it, memo_it_data(it2));
       return it2;
     }
   }
@@ -189,8 +189,8 @@ uint32_t zdd_intersection() {
       printf("%d:%d = (%d)\n", n[0], n[1], t->n);
       return;
     }
-    uint32_t *l = (uint32_t *) cbt_it_key(t->lo);
-    uint32_t *h = (uint32_t *) cbt_it_key(t->hi);
+    uint32_t *l = (uint32_t *) memo_it_key(t->lo);
+    uint32_t *h = (uint32_t *) memo_it_key(t->hi);
     printf("%d:%d = %d:%d, %d:%d\n", n[0], n[1], l[0], l[1], h[0], h[1]);
   }
 
@@ -200,10 +200,10 @@ uint32_t zdd_intersection() {
     key[0] = lo;
     key[1] = hi;
     key[2] = v;
-    cbt_it it;
-    int just_created = cbt_it_insert_u(&it, node_tab, (void *) key, 12);
+    memo_it it;
+    int just_created = memo_it_insert_u(&it, node_tab, (void *) key, 12);
     if (just_created) {
-      cbt_it_put(it, (void *) freenode);
+      memo_it_put(it, (void *) freenode);
       node_ptr n = pool[freenode];
       n->v = v;
       n->lo = lo;
@@ -215,11 +215,11 @@ uint32_t zdd_intersection() {
       }
       return freenode++;
     }
-    return (uint32_t) cbt_it_data(it);
+    return (uint32_t) memo_it_data(it);
   }
 
-  uint32_t instantiate(cbt_it it) {
-    node_template_ptr t = (node_template_ptr) cbt_it_data(it);
+  uint32_t instantiate(memo_it it) {
+    node_template_ptr t = (node_template_ptr) memo_it_data(it);
     // Return if already converted to node.
     if (!t->lo) return t->n;
     // Recurse on LO, HI edges.
@@ -240,11 +240,11 @@ uint32_t zdd_intersection() {
 
   insert_template(z0, z1);
   freenode = z0;  // Overwrite input trees.
-  //cbt_forall(tab, dump);
+  //memo_forall(tab, dump);
   uint32_t key[2];
   key[0] = z0;
   key[1] = z1;
-  cbt_it it = cbt_it_at_u(tab, (void *) key, 8);
+  memo_it it = memo_it_at_u(tab, (void *) key, 8);
   uint32_t root = instantiate(it);
   // TODO: What if the intersection is node 0 or 1?
   if (root < z0) {
@@ -257,23 +257,23 @@ uint32_t zdd_intersection() {
     uint32_t *k = (uint32_t *) key;
     if (k[0] == k[1] && t != top && t != bot) free(t);
   }
-  cbt_forall(tab, clear_it);
-  cbt_clear(tab);
+  memo_forall(tab, clear_it);
+  memo_clear(tab);
 
-  cbt_clear(node_tab);
+  memo_clear(node_tab);
   return z0;
 }
 
 void zdd_check() {
-  cbt_t node_tab;
-  cbt_init(node_tab);
+  memo_t node_tab;
+  memo_init(node_tab);
   for (uint32_t i = 2; i < freenode; i++) {
-    cbt_it it;
+    memo_it it;
     uint32_t key[3];
     key[0] = pool[i]->lo;
     key[1] = pool[i]->hi;
     key[2] = pool[i]->v;
-    if (!cbt_it_insert_u(&it, node_tab, (void *) key, 12)) {
+    if (!memo_it_insert_u(&it, node_tab, (void *) key, 12)) {
       printf("duplicate: %d %d\n", i, (int) it->data);
     } else {
       it->data = (void *) i;
@@ -288,7 +288,7 @@ void zdd_check() {
       printf("HI self-loop: %d\n", i);
     }
   }
-  cbt_clear(node_tab);
+  memo_clear(node_tab);
 }
 
 void zdd_init() {
