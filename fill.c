@@ -182,13 +182,15 @@ int main() {
 
   if (!scanf("%d %d\n", &rcount, &ccount)) die("input error");
   int board[rcount][ccount];
-  darray_t list[rcount][ccount];
+  darray_t white[rcount][ccount];
+  darray_t black[rcount][ccount];
   darray_t must[rcount * ccount];
 
   for (int i = 0; i < rcount; i++) {
     int c;
     for (int j = 0; j < ccount; j++) {
-      darray_init(list[i][j]);
+      darray_init(white[i][j]);
+      darray_init(black[i][j]);
       darray_init(must[i * ccount + j]);
       c = getchar();
       if (c == EOF || c == '\n') die("input error");
@@ -215,23 +217,41 @@ int main() {
     if (c != '\n') die("input error");
   }
   int v = 1;
-  darray_t r, c, growth, dupe, psize;
+  darray_t r, c, blackr, blackc, growth, dupe, psize;
   darray_init(r);
   darray_init(c);
+  darray_init(blackr);
+  darray_init(blackc);
   darray_init(growth);
   darray_init(dupe);
   darray_init(psize);
+  // Sacrifice a void * so we can index psize from 1.
+  darray_append(psize, NULL);
   for (int i = 0; i < rcount; i++) {
     for (int j = 0; j < ccount; j++) {
       int n = board[i][j];
       if (n) {
 	// We store more information than we need in scratch for debugging.
+	// The entry [i][j] is:
+	//  -1 when being considered as part of the current polyomino
+	//  -2 when already searched
+	//   0 when not involved yet
+	//  >0 when a potential site to grow the current polyomino
 	int scratch[rcount][ccount];
 	memset(scratch, 0, rcount * ccount * sizeof(int));
 	scratch[i][j] = -1;
 
 	void recurse(int x, int y, int m, int lower) {
+	  int intat(darray_t a, int i) { return (int) darray_at(a, i); }
+	  if (m == n) {
+	    // It has grown to the right size.
+	    // Check squares adjacent to polyomino.
+	    // TODO: We could be smarter about this: we should only check
+	    // the potential growth sites and squares already searched because
+	    // these are the only potential trouble spots.
+	    int invalid = 0;
     /*
+    printf("v %d\n", v);
     for(int a = 0; a < rcount; a++) {
       for (int b = 0; b < ccount; b++) {
 	putchar(scratch[a][b] + '0');
@@ -240,12 +260,37 @@ int main() {
     }
     putchar('\n');
     */
-	  if (m == n) {
-	    // Grown to the right size.
-	    darray_append(list[i][j], (void *) v);
+	    void blackcheck(int i, int j) {
+	      void blackchecksquare(int i, int j) {
+		if (i >= 0 && i < rcount && j >= 0 && j < ccount &&
+		    scratch[i][j] != -1) {
+		  if (board[i][j] == n) {
+		    // An n-polyomino cannot border a square clued with n.
+		    printf("fail %d %d = %d\n", i, j, n);
+		    invalid++;
+		  }
+		}
+	      }
+	      blackchecksquare(i - 1, j);
+	      blackchecksquare(i + 1, j);
+	      blackchecksquare(i, j - 1);
+	      blackchecksquare(i, j + 1);
+	    }
+	    blackcheck(i, j);
+	    void runblackcheck(void *data) {
+	      int k = (int) data;
+	      blackcheck(intat(r, k), intat(c, k));
+	    }
+	    darray_forall(growth, runblackcheck);
+
+	    if (invalid) return;
+
+	    darray_remove_all(blackr);
+	    darray_remove_all(blackc);
+	    darray_append(white[i][j], (void *) v);
 	    void addv(void *data) {
 	      int k = (int) data;
-	      darray_append(list[(int) darray_at(r, k)][(int) darray_at(c, k)], (void *) v);
+	      darray_append(white[intat(r, k)][intat(c, k)], (void *) v);
 	    }
 	    darray_forall(growth, addv);
 	    darray_append(must[i * ccount + j], (void *) v);
@@ -257,23 +302,23 @@ int main() {
 	    v++;
 	    return;
 	  }
-	  void check(int i, int j) {
+	  void check(int x, int y) {
 	    // See if square is suitable for growing polyomino.
-	    if (i >= 0 && i < rcount && j >= 0 && j < ccount &&
-		!scratch[i][j] &&
-		(board[i][j] == n || board[i][j] == 0)) {
+	    if (x >= 0 && x < rcount && y >= 0 && y < ccount &&
+		!scratch[x][y] &&
+		(board[x][y] == n || board[x][y] == 0)) {
 	      // Have we seen this polyomino before?
-	      if (board[i][j] == n) {
-		if ((i < x || (i == x && j < y))) {
+	      if (board[x][y] == n) {
+		if ((x < i || (x == i && y < j))) {
 		  // We already handled it last time we encountered it.
 		  return;
 		} else {
-		  darray_append(dupe, (void *) (i * ccount + j));
+		  darray_append(dupe, (void *) (x * ccount + y));
 		}
 	      }
-	      darray_append(r, (void *) i);
-	      darray_append(c, (void *) j);
-	      scratch[i][j] = darray_count(r);
+	      darray_append(r, (void *) x);
+	      darray_append(c, (void *) y);
+	      scratch[x][y] = darray_count(r);
 	    }
 	  }
 	  int old = darray_count(r);
@@ -285,9 +330,9 @@ int main() {
 	  // Recurse through each growing site.
 	  for(int k = lower; k < darray_count(r); k++) {
 	    darray_append(growth, (void *) k);
-	    scratch[(int) darray_at(r, k)][(int) darray_at(c, k)] = -1;
-	    recurse((int) darray_at(r, k), (int) darray_at(c, k), m + 1, k + 1);
-	    scratch[(int) darray_at(r, k)][(int) darray_at(c, k)] = -2;
+	    scratch[intat(r, k)][intat(c, k)] = -1;
+	    recurse(intat(r, k), intat(c, k), m + 1, k + 1);
+	    scratch[intat(r, k)][intat(c, k)] = -2;
 	    darray_remove_last(growth);
 	  }
 	  for(int k = old; k < darray_count(r); k++) {
@@ -310,8 +355,10 @@ int main() {
     printf("%d:", i);
     darray_forall(must[i], pit);
     printf("\n");
-    contains_exactly_one(must[i]);
-    zdd_intersection();
+    if (darray_count(must[i]) > 0) {
+      contains_exactly_one(must[i]);
+      zdd_intersection();
+    }
   }
 
   for (int i = 0; i < rcount; i++) {
@@ -321,10 +368,10 @@ int main() {
       void dump(void *data) {
 	printf(" %d", (int) data);
       }
-      darray_forall(list[i][j], dump);
+      darray_forall(white[i][j], dump);
       printf("\n");
-      if (darray_count(list[i][j]) > 1) {
-	contains_at_most_one(list[i][j]);
+      if (darray_count(white[i][j]) > 1) {
+	contains_at_most_one(white[i][j]);
 	if (first) first = 0; else zdd_intersection();
       }
     }
@@ -340,8 +387,8 @@ int main() {
     int n = zdd_v(hi);
     for (int i = 0; i < rcount; i++) {
       for (int j = 0; j < ccount; j++) {
-	if (darray_index_of(list[i][j], (void *) n) >= 0) {
-	  board[i][j] = (int) darray_at(psize, n - 1);
+	if (darray_index_of(white[i][j], (void *) n) >= 0) {
+	  board[i][j] = (int) darray_at(psize, n);
 	}
       }
     }
