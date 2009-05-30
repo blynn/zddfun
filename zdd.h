@@ -3,6 +3,7 @@
 */
 void zdd_init();
 void zdd_check();
+uint16_t zdd_set_vmax(int i);
 // Call before computing a new ZDD on the stack.
 void zdd_push();
 void zdd_pop();
@@ -23,3 +24,8 @@ uint32_t zdd_next_node();
 void zdd_count();
 // Replace top two ZDDs on the stack with their intersection.
 uint32_t zdd_intersection();
+
+// Need to have set vmax to call these.
+
+// Construct ZDD of all sets.
+uint32_t zdd_powerset();

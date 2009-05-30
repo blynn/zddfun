@@ -19,6 +19,11 @@ static node_t pool[1<<24];
 static uint32_t freenode, POOL_MAX = (1<<24) - 1;
 static mpz_ptr count[1<<24];
 static darray_t stack;
+static uint16_t vmax;
+
+uint16_t zdd_set_vmax(int i) {
+  return vmax = i;
+}
 
 void zdd_push() { darray_append(stack, (void *) freenode); }
 void zdd_pop() { darray_remove_last(stack); }
@@ -97,6 +102,8 @@ uint32_t zdd_add_node(uint32_t v, int offlo, int offhi) {
 }
 
 uint32_t zdd_intersection() {
+  if (darray_count(stack) == 0) return 0;
+  if (darray_count(stack) == 1) return (uint32_t) darray_last(stack);
   uint32_t z0 = (uint32_t) darray_at(stack, darray_count(stack) - 2);
   uint32_t z1 = (uint32_t) darray_remove_last(stack);
   struct node_template_s {
@@ -307,4 +314,12 @@ void zdd_dump() {
   for(uint32_t i = (uint32_t) darray_last(stack); i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
+}
+
+uint32_t zdd_powerset() {
+  uint16_t r = zdd_next_node();
+  zdd_push();
+  for(int v = 1; v < vmax; v++) zdd_add_node(v, 1, 1);
+  zdd_add_node(vmax, -1, -1);
+  return r;
 }

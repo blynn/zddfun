@@ -24,6 +24,7 @@
 //
 // This ZDD has 9^81 members.
 void global_one_digit_per_box() {
+  zdd_dump();
   int next = 9;
   uint32_t n = zdd_next_node();
   for (int i = 1; i <= 729; i++) {
@@ -58,6 +59,7 @@ void global_one_digit_per_box() {
 // The intersection for all d and a fixed r has 9!*9^72 members.
 // The intersection for all r and a fixed d has 9^9*8^72 members.
 void unique_digit_per_row(int d, int r) {
+  zdd_dump();
   // The order is determined by sorting by number, then by letter.
   int next = 81 * r + d;  // The next node involving the digit d.
   int v = 1;
@@ -102,6 +104,7 @@ void unique_digit_per_row(int d, int r) {
 // elements. In particular, will not work for a 9 followed by a 1!
 // Generalization of previous function.
 void contains_exactly_one(int *list) {
+  zdd_dump();
   // The order is determined by sorting by number, then by letter.
   int v = 1;
   int *next = list;
@@ -143,6 +146,7 @@ void contains_exactly_one(int *list) {
 // Construct ZDD of sets containing all elements in the given list.
 // The list is terminated by -1.
 void contains_all(int *list) {
+  zdd_dump();
   int v = 1;
   int *next = list;
   while (v <= 729) {
@@ -214,11 +218,9 @@ int main() {
     }
   }
   darray_append(list, (void *) -1);
-  zdd_push();
   contains_all((int *) list->item);
   darray_clear(list);
 
-  zdd_push();
   global_one_digit_per_box();
   zdd_intersection();
 
@@ -228,7 +230,6 @@ int main() {
   fflush(stdout);
   for (int i = 1; i <= 9; i++) {
     for (int r = 0; r < 9; r++) {
-      zdd_push();
       unique_digit_per_row(i, r);
       if (r) zdd_intersection();
     }
@@ -239,7 +240,6 @@ int main() {
       for (int r = 0; r < 3; r++) {
 	printf("3x3 %d: %d, %d\n", i, r, c);
 	fflush(stdout);
-	zdd_push();
 	unique_digit_per_3x3(i, r, c);
 	if (r) zdd_intersection();
       }
@@ -251,7 +251,6 @@ int main() {
     for (int c = 0; c < 9; c++) {
       printf("cols %d: %d\n", i, c);
       fflush(stdout);
-      zdd_push();
       unique_digit_per_col(i, c);
       if (c) zdd_intersection();
     }
