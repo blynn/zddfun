@@ -215,11 +215,12 @@ int main() {
     if (c != '\n') die("input error");
   }
   int v = 1;
-  darray_t r, c, growth, dupe;
+  darray_t r, c, growth, dupe, psize;
   darray_init(r);
   darray_init(c);
   darray_init(growth);
   darray_init(dupe);
+  darray_init(psize);
   for (int i = 0; i < rcount; i++) {
     for (int j = 0; j < ccount; j++) {
       int n = board[i][j];
@@ -252,6 +253,7 @@ int main() {
 	      darray_append(must[(int) data], (void *) v);
 	    }
 	    darray_forall(dupe, addmust);
+	    darray_append(psize, (void *) n);
 	    v++;
 	    return;
 	  }
@@ -323,13 +325,33 @@ int main() {
       printf("\n");
       if (darray_count(list[i][j]) > 1) {
 	contains_at_most_one(list[i][j]);
-	//if (first) first = 0; else zdd_intersection();
-    zdd_intersection();
+	if (first) first = 0; else zdd_intersection();
       }
     }
-    //zdd_intersection();
+    zdd_intersection();
   }
+
   zdd_dump();
   zdd_count();
+
+  // Print lexicographically largest solution, assuming it exists.
+  uint32_t hi = zdd_root();
+  while(hi != 1) {
+    int n = zdd_v(hi);
+    for (int i = 0; i < rcount; i++) {
+      for (int j = 0; j < ccount; j++) {
+	if (darray_index_of(list[i][j], (void *) n) >= 0) {
+	  board[i][j] = (int) darray_at(psize, n - 1);
+	}
+      }
+    }
+    hi = zdd_hi(hi);
+  }
+  for (int i = 0; i < rcount; i++) {
+    for (int j = 0; j < ccount; j++) {
+      putchar(board[i][j] < 10 ? '0' + board[i][j] : 'A' + board[i][j] - 10);
+    }
+    putchar('\n');
+  }
   return 0;
 }
