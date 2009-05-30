@@ -217,7 +217,7 @@ int main() {
     if (c != '\n') die("input error");
   }
   int v = 1;
-  darray_t r, c, blackr, blackc, growth, dupe, psize;
+  darray_t r, c, blackr, blackc, growth, dupe, psize, adj;
   darray_init(r);
   darray_init(c);
   darray_init(blackr);
@@ -225,6 +225,7 @@ int main() {
   darray_init(growth);
   darray_init(dupe);
   darray_init(psize);
+  darray_init(adj);
   // Sacrifice a void * so we can index psize from 1.
   darray_append(psize, NULL);
   for (int i = 0; i < rcount; i++) {
@@ -234,7 +235,8 @@ int main() {
 	// We store more information than we need in scratch for debugging.
 	// The entry [i][j] is:
 	//  -1 when being considered as part of the current polyomino
-	//  -2 when already searched
+	//  -2 when already searched from the same home square
+	//  -3 when already searched from a different home square
 	//   0 when not involved yet
 	//  >0 when a potential site to grow the current polyomino
 	int scratch[rcount][ccount];
@@ -243,82 +245,27 @@ int main() {
 
 	void recurse(int x, int y, int m, int lower) {
 	  int intat(darray_t a, int i) { return (int) darray_at(a, i); }
-	  if (m == n) {
-	    // It has grown to the right size.
-	    // Check squares adjacent to polyomino.
-	    // TODO: We could be smarter about this: we should only check
-	    // the potential growth sites and squares already searched because
-	    // these are the only potential trouble spots.
-	    int invalid = 0;
-    /*
-    printf("v %d\n", v);
-    for(int a = 0; a < rcount; a++) {
-      for (int b = 0; b < ccount; b++) {
-	putchar(scratch[a][b] + '0');
-      }
-      putchar('\n');
-    }
-    putchar('\n');
-    */
-	    void blackcheck(int i, int j) {
-	      void blackchecksquare(int i, int j) {
-		if (i >= 0 && i < rcount && j >= 0 && j < ccount &&
-		    scratch[i][j] != -1) {
-		  if (board[i][j] == n) {
-		    // An n-polyomino cannot border a square clued with n.
-		    printf("fail %d %d = %d\n", i, j, n);
-		    invalid++;
-		  }
-		}
-	      }
-	      blackchecksquare(i - 1, j);
-	      blackchecksquare(i + 1, j);
-	      blackchecksquare(i, j - 1);
-	      blackchecksquare(i, j + 1);
-	    }
-	    blackcheck(i, j);
-	    void runblackcheck(void *data) {
-	      int k = (int) data;
-	      blackcheck(intat(r, k), intat(c, k));
-	    }
-	    darray_forall(growth, runblackcheck);
-
-	    if (invalid) return;
-
-	    darray_remove_all(blackr);
-	    darray_remove_all(blackc);
-	    darray_append(white[i][j], (void *) v);
-	    void addv(void *data) {
-	      int k = (int) data;
-	      darray_append(white[intat(r, k)][intat(c, k)], (void *) v);
-	    }
-	    darray_forall(growth, addv);
-	    darray_append(must[i * ccount + j], (void *) v);
-	    void addmust(void *data) {
-	      darray_append(must[(int) data], (void *) v);
-	    }
-	    darray_forall(dupe, addmust);
-	    darray_append(psize, (void *) n);
-	    v++;
-	    return;
-	  }
+	  // Even when m = n we look for sites to grow the polyomino, because
+	  // in this case, these are blacklisted squares; no other n-omino
+	  // may intersect these squares.
 	  void check(int x, int y) {
 	    // See if square is suitable for growing polyomino.
 	    if (x >= 0 && x < rcount && y >= 0 && y < ccount &&
 		!scratch[x][y] &&
 		(board[x][y] == n || board[x][y] == 0)) {
+	      darray_append(r, (void *) x);
+	      darray_append(c, (void *) y);
+	      scratch[x][y] = darray_count(r);
 	      // Have we seen this polyomino before?
 	      if (board[x][y] == n) {
 		if ((x < i || (x == i && y < j))) {
 		  // We already handled it last time we encountered it.
-		  return;
+		  // Mark it as already searched.
+		  scratch[x][y] = -3;
 		} else {
 		  darray_append(dupe, (void *) (x * ccount + y));
 		}
 	      }
-	      darray_append(r, (void *) x);
-	      darray_append(c, (void *) y);
-	      scratch[x][y] = darray_count(r);
 	    }
 	  }
 	  int old = darray_count(r);
@@ -327,16 +274,95 @@ int main() {
 	  check(x, y + 1);
 	  check(x + 1, y);
 	  check(x, y - 1);
-	  // Recurse through each growing site.
-	  for(int k = lower; k < darray_count(r); k++) {
-	    darray_append(growth, (void *) k);
-	    scratch[intat(r, k)][intat(c, k)] = -1;
-	    recurse(intat(r, k), intat(c, k), m + 1, k + 1);
-	    scratch[intat(r, k)][intat(c, k)] = -2;
-	    darray_remove_last(growth);
+
+	  if (m == n) {
+	    // It has grown to the right size.
+	    // Check squares adjacent to polyomino. We need only check
+	    // the unsearched growth sites and squares already searched because
+	    // these are the only potential trouble spots.
+	    for(int k = 0; k < darray_count(r); k++) {
+	      int x = intat(r, k);
+	      int y = intat(c, k);
+	      if (scratch[x][y] != -1) {
+		if (board[x][y] == n) {
+		  // An n-polyomino cannot border a square clued with n.
+		  printf("fail %d %d = %d\n", x, y, n);
+		  darray_remove_all(blackr);
+		  darray_remove_all(blackc);
+		  goto abort;
+		} else {
+		  darray_append(blackr, (void *) x);
+		  darray_append(blackc, (void *) y);
+		}
+	      }
+	    }
+    printf("v %d\n", v);
+    for(int a = 0; a < rcount; a++) {
+      for (int b = 0; b < ccount; b++) {
+	putchar(scratch[a][b] + '0');
+      }
+      putchar('\n');
+    }
+    putchar('\n');
+    /*
+    */
+
+	    darray_append(psize, (void *) n);
+	    void checkconflict(void *data) {
+	      // If the other polyomino covers our home square then don't
+	      // bother reporting the conflict, because we handle this case
+	      // elsewhere
+	      if (darray_index_of(must[i * ccount + j], data) >= 0) return;
+	      int w = (int) data;
+	      if ((int) darray_at(psize, w) == n) {
+		darray_ptr a = (darray_ptr) malloc(sizeof(darray_t));
+		darray_init(a);
+		darray_append(adj, (void *) a);
+		darray_append(a, (void *) w);
+		darray_append(a, (void *) v);
+		printf("conflict %d %d\n", w, v);
+	      }
+	    }
+	    for(int k = 0; k < darray_count(blackr); k++) {
+	      int x = intat(blackr, k);
+	      int y = intat(blackc, k);
+	      darray_append(black[x][y], (void *) v);
+	      darray_forall(white[x][y], checkconflict);
+	    }
+	    darray_remove_all(blackr);
+	    darray_remove_all(blackc);
+	    darray_append(white[i][j], (void *) v);
+	    void addv(void *data) {
+	      int k = (int) data;
+	      int x = intat(r, k);
+	      int y = intat(c, k);
+	      darray_append(white[x][y], (void *) v);
+	      darray_forall(black[x][y], checkconflict);
+	    }
+	    darray_forall(growth, addv);
+	    darray_append(must[i * ccount + j], (void *) v);
+	    void addmust(void *data) {
+	      darray_append(must[(int) data], (void *) v);
+	    }
+	    darray_forall(dupe, addmust);
+	    v++;
+	  } else {
+	    // Recurse through each growing site.
+	    for(int k = lower; k < darray_count(r); k++) {
+	      int x = intat(r, k);
+	      int y = intat(c, k);
+	      if (scratch[x][y] != -3) {
+		darray_append(growth, (void *) k);
+		scratch[x][y] = -1;
+		recurse(x, y, m + 1, k + 1);
+		scratch[x][y] = -2;
+		darray_remove_last(growth);
+	      }
+	    }
 	  }
+abort:
 	  for(int k = old; k < darray_count(r); k++) {
-	    scratch[(int) darray_at(r, k)][(int) darray_at(c, k)] = 0;
+	    scratch[intat(r, k)][intat(c, k)] = 0;
 	  }
 	  darray_set_count(r, old);
 	  darray_set_count(c, old);
@@ -350,6 +376,7 @@ int main() {
   }
   vmax = v - 1;
   printf("vmax: %d\n", vmax);
+  // Each clue n must be covered by exactly one n-polyomino.
   for (int i = 0; i < rcount * ccount; i++) {
     void pit(void *data) { printf(" %d", (int) data); }
     printf("%d:", i);
@@ -361,9 +388,12 @@ int main() {
     }
   }
 
+  // Othewise, each square can be covered by at most one of the polyominoes we
+  // enumerated.
   for (int i = 0; i < rcount; i++) {
     int first = 1;
     for (int j = 0; j < ccount; j++) {
+      if (board[i][j] != 0) continue;
       printf("%d %d:", i, j);
       void dump(void *data) {
 	printf(" %d", (int) data);
@@ -377,6 +407,14 @@ int main() {
     }
     zdd_intersection();
   }
+
+  // Adjacent polyominoes must differ in size.
+  void handleadj(void *data) {
+    darray_ptr list = (darray_ptr) data;
+    contains_at_most_one(list);
+    zdd_intersection();
+  }
+  darray_forall(adj, handleadj);
 
   zdd_dump();
   zdd_count();
