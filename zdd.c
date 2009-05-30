@@ -20,8 +20,10 @@ static uint32_t freenode, POOL_MAX = (1<<24) - 1;
 static mpz_ptr count[1<<24];
 static darray_t stack;
 static uint16_t vmax;
+static char vmax_is_set;
 
 uint16_t zdd_set_vmax(int i) {
+  vmax_is_set = 1;
   return vmax = i;
 }
 
@@ -316,7 +318,15 @@ void zdd_dump() {
   }
 }
 
+void vmax_check() {
+  if (!vmax_is_set) {
+    fprintf(stderr, "vmax not set\n");
+    exit(1);
+  }
+}
+
 uint32_t zdd_powerset() {
+  vmax_check();
   uint16_t r = zdd_next_node();
   zdd_push();
   for(int v = 1; v < vmax; v++) zdd_add_node(v, 1, 1);

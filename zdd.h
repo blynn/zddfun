@@ -25,7 +25,7 @@ void zdd_count();
 // Replace top two ZDDs on the stack with their intersection.
 uint32_t zdd_intersection();
 
-// Need to have set vmax to call these.
+// Need to have set vmax to call these:
 
 // Construct ZDD of all sets.
 uint32_t zdd_powerset();

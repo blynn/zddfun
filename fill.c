@@ -189,6 +189,7 @@ int main() {
   vmax = v - 1;
   printf("%d\n", vmax);
   for (int i = 0; i < rcount; i++) {
+    int first = 1;
     for (int j = 0; j < ccount; j++) {
       printf("%d %d:", i, j);
       void dump(void *data) {
@@ -198,7 +199,7 @@ int main() {
       printf("\n");
       if (darray_count(list[i][j]) > 1) {
 	contains_at_most_one(list[i][j]);
-	zdd_intersection();
+	if (first) first = 0; else zdd_intersection();
       }
     }
   }
