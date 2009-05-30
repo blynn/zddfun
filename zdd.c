@@ -337,3 +337,20 @@ uint32_t zdd_powerset() {
   zdd_add_node(vmax, -1, -1);
   return r;
 }
+
+void zdd_forall(void (*fn)(int *, int)) {
+  vmax_check();
+  int v[vmax], vcount = 0;
+  void recurse(uint32_t p) {
+    if (!p) return;
+    if (1 == p) {
+      fn(v, vcount);
+      return;
+    }
+    if (zdd_lo(p)) recurse(zdd_lo(p));
+    v[vcount++] = zdd_v(p);
+    recurse(zdd_hi(p));
+    vcount--;
+  }
+  recurse(zdd_root());
+}

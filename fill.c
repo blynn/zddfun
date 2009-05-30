@@ -228,6 +228,11 @@ int main() {
   darray_init(adj);
   // Sacrifice a void * so we can index psize from 1.
   darray_append(psize, NULL);
+
+  int onboard(int x, int y) {
+    return x >= 0 && x < rcount && y >= 0 && y < ccount;
+  }
+
   for (int i = 0; i < rcount; i++) {
     for (int j = 0; j < ccount; j++) {
       int n = board[i][j];
@@ -246,12 +251,11 @@ int main() {
 	void recurse(int x, int y, int m, int lower) {
 	  int intat(darray_t a, int i) { return (int) darray_at(a, i); }
 	  // Even when m = n we look for sites to grow the polyomino, because
-	  // in this case, these are blacklisted squares; no other n-omino
+	  // in this case, we blacklist these squares; no other n-omino
 	  // may intersect these squares.
 	  void check(int x, int y) {
 	    // See if square is suitable for growing polyomino.
-	    if (x >= 0 && x < rcount && y >= 0 && y < ccount &&
-		!scratch[x][y] &&
+	    if (onboard(x,y) && !scratch[x][y] &&
 		(board[x][y] == n || board[x][y] == 0)) {
 	      darray_append(r, (void *) x);
 	      darray_append(c, (void *) y);
@@ -286,7 +290,6 @@ int main() {
 	      if (scratch[x][y] != -1) {
 		if (board[x][y] == n) {
 		  // An n-polyomino cannot border a square clued with n.
-		  printf("fail %d %d = %d\n", x, y, n);
 		  darray_remove_all(blackr);
 		  darray_remove_all(blackc);
 		  goto abort;
@@ -296,6 +299,7 @@ int main() {
 		}
 	      }
 	    }
+    /*
     printf("v %d\n", v);
     for(int a = 0; a < rcount; a++) {
       for (int b = 0; b < ccount; b++) {
@@ -304,14 +308,13 @@ int main() {
       putchar('\n');
     }
     putchar('\n');
-    /*
     */
 
 	    darray_append(psize, (void *) n);
 	    void checkconflict(void *data) {
 	      // If the other polyomino covers our home square then don't
 	      // bother reporting the conflict, because we handle this case
-	      // elsewhere
+	      // elsewhere.
 	      if (darray_index_of(must[i * ccount + j], data) >= 0) return;
 	      int w = (int) data;
 	      if ((int) darray_at(psize, w) == n) {
@@ -320,7 +323,7 @@ int main() {
 		darray_append(adj, (void *) a);
 		darray_append(a, (void *) w);
 		darray_append(a, (void *) v);
-		printf("conflict %d %d\n", w, v);
+		//printf("conflict %d %d\n", w, v);
 	      }
 	    }
 	    for(int k = 0; k < darray_count(blackr); k++) {
@@ -337,7 +340,6 @@ int main() {
 	      int x = intat(r, k);
 	      int y = intat(c, k);
 	      darray_append(white[x][y], (void *) v);
-	      darray_forall(black[x][y], checkconflict);
 	    }
 	    darray_forall(growth, addv);
 	    darray_append(must[i * ccount + j], (void *) v);
@@ -374,14 +376,10 @@ abort:
       }
     }
   }
+  zdd_set_vmax(v - 1);
   vmax = v - 1;
-  printf("vmax: %d\n", vmax);
   // Each clue n must be covered by exactly one n-polyomino.
   for (int i = 0; i < rcount * ccount; i++) {
-    void pit(void *data) { printf(" %d", (int) data); }
-    printf("%d:", i);
-    darray_forall(must[i], pit);
-    printf("\n");
     if (darray_count(must[i]) > 0) {
       contains_exactly_one(must[i]);
       zdd_intersection();
@@ -394,12 +392,12 @@ abort:
     int first = 1;
     for (int j = 0; j < ccount; j++) {
       if (board[i][j] != 0) continue;
-      printf("%d %d:", i, j);
-      void dump(void *data) {
-	printf(" %d", (int) data);
-      }
-      darray_forall(white[i][j], dump);
-      printf("\n");
+      //printf("%d %d:", i, j);
+      //void dump(void *data) {
+	//printf(" %d", (int) data);
+      //}
+      //darray_forall(white[i][j], dump);
+      //printf("\n");
       if (darray_count(white[i][j]) > 1) {
 	contains_at_most_one(white[i][j]);
 	if (first) first = 0; else zdd_intersection();
@@ -416,27 +414,57 @@ abort:
   }
   darray_forall(adj, handleadj);
 
-  zdd_dump();
-  zdd_count();
-
-  // Print lexicographically largest solution, assuming it exists.
-  uint32_t hi = zdd_root();
-  while(hi != 1) {
-    int n = zdd_v(hi);
-    for (int i = 0; i < rcount; i++) {
-      for (int j = 0; j < ccount; j++) {
-	if (darray_index_of(white[i][j], (void *) n) >= 0) {
-	  board[i][j] = (int) darray_at(psize, n);
+  int solcount = 0;
+  void printsol(int *v, int count) {
+    char pic[rcount][ccount];
+    memset(pic, '?', rcount * ccount);
+    for(int k = 0; k < count; k++) {
+      for (int i = 0; i < rcount; i++) {
+	for (int j = 0; j < ccount; j++) {
+	  if (darray_index_of(white[i][j], (void *) v[k]) >= 0) {
+	    int n = (int) darray_at(psize, v[k]);
+	    pic[i][j] = n < 10 ? '0' + n : 'A' + n - 10;
+	  }
 	}
       }
     }
-    hi = zdd_hi(hi);
-  }
-  for (int i = 0; i < rcount; i++) {
-    for (int j = 0; j < ccount; j++) {
-      putchar(board[i][j] < 10 ? '0' + board[i][j] : 'A' + board[i][j] - 10);
+    // Now we have a new problem: tile the remaining squares with polyominoes
+    // of arbitrary size to satisfy the puzzle conditions.
+    // TODO: Brute force search to finish the puzzle. For now, we only check
+    // the simplest cases.
+    for (int i = 0; i < rcount; i++) {
+      for (int j = 0; j < ccount; j++) {
+	if ('?' == pic[i][j]) {
+	  int count = 0;
+	  int is1 = 1;
+	  void check1(int i, int j) {
+	    if (onboard(i, j)) {
+	      if ('?' == pic[i][j]) is1 = 0;
+	      if ('1' == pic[i][j]) count++;
+	    }
+	  }
+	  check1(i - 1, j);
+	  check1(i + 1, j);
+	  check1(i, j - 1);
+	  check1(i, j + 1);
+	  if (is1) {
+	    // Return if we have a single ? next to at least one 1.
+	    if (count) return;
+	    pic[i][j] = '1';
+	  }
+	}
+      }
+    }
+
+    printf("Solution #%d:\n", ++solcount);
+    for (int i = 0; i < rcount; i++) {
+      for (int j = 0; j < ccount; j++) {
+	putchar(pic[i][j]);
+      }
+      putchar('\n');
     }
     putchar('\n');
   }
+  zdd_forall(printsol);
   return 0;
 }

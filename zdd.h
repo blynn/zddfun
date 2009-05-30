@@ -29,3 +29,6 @@ uint32_t zdd_intersection();
 
 // Construct ZDD of all sets.
 uint32_t zdd_powerset();
+
+// Run callback on every set in ZDD.
+void zdd_forall(void (*fn)(int *, int));
