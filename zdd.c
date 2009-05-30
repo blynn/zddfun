@@ -256,6 +256,10 @@ uint32_t zdd_intersection() {
   memo_it it = memo_it_at_u(tab, (void *) key, 8);
   uint32_t root = instantiate(it);
   // TODO: What if the intersection is node 0 or 1?
+  if (root <= 1) {
+    fprintf(stderr, "root is 0 or 1!\n");
+    exit(1);
+  }
   if (root < z0) {
     *pool[z0] = *pool[root];
   } else if (root > z0)  {
