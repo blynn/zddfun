@@ -3,71 +3,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "darray.h"
+#include "inta.h"
 #include "zdd.h"
 
 #include <stdarg.h>
 #include "io.h"
-
-uint32_t vmax;
-
-// Construct ZDD of sets containing exactly 1 of the elements in the given list.
-// Zero suppression means we must treat sequences in the list carefully.
-void contains_exactly_one(darray_t a) {
-  zdd_push();
-  int v = 1;
-  int i = 0;
-  while(v <= vmax) {
-    if (i >= darray_count(a)) {
-      // Don't care about the rest of the elements.
-      zdd_add_node(v++, 1, 1);
-    } else if (v == (int) darray_at(a, i)) {
-      // Find length of consecutive sequence.
-      int k;
-      for(k = 0;
-	  i + k < darray_count(a) && v + k == (int) darray_at(a, i + k); k++);
-      uint32_t n = zdd_next_node();
-      uint32_t h = v + k > vmax ? 1 : n + k + (darray_count(a) != i + k);
-      if (i >= 1) {
-	// In the middle of the list: must fix previous node; we reach said node
-	// if we've seen an element in the list already, in which case the
-	// arrows must bypass the entire sequence, i.e. we need the whole
-	// sequence to be out of the set.
-	//set_node(n - 1, v - 1, h, h);
-	zdd_set_hilo(n - 1, h);
-      }
-      i += k;
-      k += v;
-      while (v < k) {
-	// If we see an element, bypass the rest of the sequence (see above),
-	// otherwise we look for the next element in the sequence.
-	zdd_add_node(v++, 1, 1);
-	zdd_set_hi(zdd_last_node(), h);
-	//set_node(n, v++, n + 1, h);
-	//n++;
-      }
-      //v--;
-      if (darray_count(a) == i) {
-	// If none of the list showed up, then return false, otherwise,
-	// onwards! (Through the rest of the elements to the end.)
-	//set_node(n - 1, v, 0, h);
-	zdd_set_lo(zdd_last_node(), 0);
-	zdd_set_hi(zdd_last_node(), h);
-      }
-    } else if (!i) {
-      // We don't care about the membership of elements before the list.
-      zdd_add_node(v++, 1, 1);
-    } else {
-      zdd_add_node(v, 2, 2);
-      zdd_add_node(v, 2, 2);
-      v++;
-    }
-  }
-  // Fix last node.
-  uint32_t last = zdd_last_node();
-  if (zdd_lo(last) > last) zdd_set_lo(last, 1);
-  if (zdd_hi(last) > last) zdd_set_hi(last, 1);
-}
 
 int main() {
   zdd_init();
@@ -76,12 +16,12 @@ int main() {
   if (!scanf("%d\n", &n)) die("input error");
   uint32_t rcount = n + 1, ccount = n + 2;
   int board[rcount][ccount];
-  darray_t list[rcount][ccount];
+  inta_t list[rcount][ccount];
 
   for(int i = 0; i < rcount; i++) {
     int c;
     for(int j = 0; j < ccount; j++) {
-      darray_init(list[i][j]);
+      inta_init(list[i][j]);
       c = getchar();
       if (c == EOF || c == '\n') die("input error");
       int encode(char c) {
@@ -107,8 +47,8 @@ int main() {
   // n is useless as the highest number on a domino. Reuse it as
   // the total number of dominoes.
   n = rcount * ccount / 2;
-  darray_t tally[n];
-  for(int i = 0; i < n; i++) darray_init(tally[i]);
+  inta_t tally[n];
+  for(int i = 0; i < n; i++) inta_init(tally[i]);
 
   int geti(int a, int b) {
     // Return canonical numbering for a given domino.
@@ -122,45 +62,45 @@ int main() {
       int a, b, c;
       if (j < ccount - 1) {
 	// Horizontal tiling constraint.
-	darray_append(list[i][j], (void *) v);
-	darray_append(list[i][j + 1], (void *) v);
+	inta_append(list[i][j], v);
+	inta_append(list[i][j + 1], v);
 	a = board[i][j];
 	b = board[i][j + 1];
 	if (a < b) c = a, a = b, b = c;
 	// One domino per board constraint.
-	darray_append(tally[geti(a, b)], (void *) v);
+	inta_append(tally[geti(a, b)], v);
 	v++;
       }
 
       if (i < rcount - 1) {
 	// Vertical tiling constraint.
-	darray_append(list[i][j], (void *) v);
-	darray_append(list[i + 1][j], (void *) v);
+	inta_append(list[i][j], v);
+	inta_append(list[i + 1][j], v);
 	a = board[i][j];
 	b = board[i + 1][j];
 	if (a < b) c = a, a = b, b = c;
 	// One domino per board constraint.
-	darray_append(tally[geti(a, b)], (void *) v);
+	inta_append(tally[geti(a, b)], v);
 	v++;
       }
     }
   }
-  vmax = v - 1;
+  zdd_set_vmax(v - 1);
 
   for(int i = 0; i < rcount; i++) {
     for(int j = 0; j < ccount; j++) {
-      contains_exactly_one(list[i][j]);
+      zdd_contains_exactly_1(inta_itemptr(list[i][j]), inta_count(list[i][j]));
       if (i || j) zdd_intersection();
     }
   }
 
   int compar(const void *a, const void *b) {
-    return darray_count(a) > darray_count(b);
+    return inta_count((const inta_ptr) a) > inta_count((const inta_ptr) b);
   }
-  qsort(tally, n, sizeof(darray_t), compar);
+  qsort(tally, n, sizeof(inta_t), compar);
   for(int i = 0; i < n; i++) {
     //printf("%d/%d\n", i + 1, n);
-    contains_exactly_one(tally[i]);
+    zdd_contains_exactly_1(inta_itemptr(tally[i]), inta_count(tally[i]));
     zdd_intersection();
   }
 

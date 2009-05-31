@@ -2,7 +2,7 @@
 
 CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc
 
-ZDD:=memo.c darray.c zdd.c io.c
+ZDD:=memo.c darray.c zdd.c io.c inta.c
 
 target: fill
 

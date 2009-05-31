@@ -36,3 +36,6 @@ uint32_t zdd_powerset();
 
 // Runs callback on every set in ZDD.
 void zdd_forall(void (*fn)(int *, int));
+
+// Construct ZDD of sets containing exactly 1 of the elements in the given list.
+void zdd_contains_exactly_1(int *a, int count);

@@ -370,3 +370,61 @@ void zdd_forall(void (*fn)(int *, int)) {
 uint32_t zdd_size() {
   return zdd_next_node() - zdd_root() + 2;
 }
+
+// Construct ZDD of sets containing exactly 1 of the elements in the given list.
+// Zero suppression means we must treat sequences in the list carefully.
+void zdd_contains_exactly_1(int *a, int count) {
+  vmax_check();
+  zdd_push();
+  int v = 1;
+  int i = 0;
+  while(v <= vmax) {
+    if (i >= count) {
+      // Don't care about the rest of the elements.
+      zdd_add_node(v++, 1, 1);
+    } else if (v == a[i]) {
+      // Find length of consecutive sequence.
+      int k;
+      for(k = 0; i + k < count && v + k == a[i + k]; k++);
+      uint32_t n = zdd_next_node();
+      uint32_t h = v + k > vmax ? 1 : n + k + (count != i + k);
+      if (i >= 1) {
+	// In the middle of the list: must fix previous node; we reach said node
+	// if we've seen an element in the list already, in which case the
+	// arrows must bypass the entire sequence, i.e. we need the whole
+	// sequence to be out of the set.
+	//set_node(n - 1, v - 1, h, h);
+	zdd_set_hilo(n - 1, h);
+      }
+      i += k;
+      k += v;
+      while (v < k) {
+	// If we see an element, bypass the rest of the sequence (see above),
+	// otherwise we look for the next element in the sequence.
+	zdd_add_node(v++, 1, 1);
+	zdd_set_hi(zdd_last_node(), h);
+	//set_node(n, v++, n + 1, h);
+	//n++;
+      }
+      //v--;
+      if (count == i) {
+	// If none of the list showed up, then return false, otherwise,
+	// onwards! (Through the rest of the elements to the end.)
+	//set_node(n - 1, v, 0, h);
+	zdd_set_lo(zdd_last_node(), 0);
+	zdd_set_hi(zdd_last_node(), h);
+      }
+    } else if (!i) {
+      // We don't care about the membership of elements before the list.
+      zdd_add_node(v++, 1, 1);
+    } else {
+      zdd_add_node(v, 2, 2);
+      zdd_add_node(v, 2, 2);
+      v++;
+    }
+  }
+  // Fix last node.
+  uint32_t last = zdd_last_node();
+  if (zdd_lo(last) > last) zdd_set_lo(last, 1);
+  if (zdd_hi(last) > last) zdd_set_hi(last, 1);
+}
