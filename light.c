@@ -59,62 +59,6 @@ void contains_exactly_n(inta_t a, int n) {
   recurse(-1, n);
 }
 
-// Construct ZDD of sets containing at least 1 of the elements in the
-// given list.
-void contains_at_least_one(inta_t a) {
-  uint32_t n = zdd_last_node();
-  // Start with ZDD of all sets.
-  int v = 1;
-  while(v < vmax) {
-    zdd_add_node(v++, 1, 1);
-  }
-  zdd_add_node(v, -1, -1);
-  if (inta_is_empty(a)) return;
-
-  // Construct new branch for when elements of the list are not found.
-  v = inta_first(a);
-  if (1 == inta_count(a)) {
-    zdd_set_lo(n + v, 0);
-    return;
-  }
-
-  uint32_t n1 = zdd_next_node();
-  zdd_set_lo(n + v, n1);
-  v++;
-  for(int i = 1; i < inta_count(a); i++) {
-    int v1 = inta_at(a, i);
-    while(v <= v1) {
-      zdd_add_node(v++, 1, 1);
-    }
-    zdd_set_hi(zdd_last_node(), n + v);
-  }
-
-  zdd_set_lo(zdd_last_node(), 0);
-  if (vmax < v) zdd_set_hi(zdd_last_node(), 1);
-}
-
-// Construct ZDD of sets not containing any elements from the given list.
-// Assumes not every variable is on the list.
-void contains_none(inta_t a) {
-  zdd_push();
-  int i = 1;
-  int v1 = inta_is_empty(a) ? -1 : inta_first(a);
-  for(int v = 1; v <= vmax; v++) {
-    if (v1 == v) {
-      if (i < inta_count(a)) {
-	v1 = inta_at(a, i++);
-      } else {
-	v1 = -1;
-      }
-    } else {
-      zdd_add_node(v, 1, 1);
-    }
-  }
-  uint32_t n = zdd_last_node();
-  zdd_set_lo(n, 1);
-  zdd_set_hi(n, 1);
-}
-
 int main() {
   zdd_init();
 
@@ -156,7 +100,7 @@ int main() {
   // Instead of constructing a ZDD excluding particular elements, we could
   // reduce the number of variables, but then we need to record which variable
   // represents which square.
-  contains_none(a);
+  zdd_contains_0(inta_raw(a), inta_count(a));
 
   for (uint32_t i = 0; i < rcount; i++) {
     inta_remove_all(a);
@@ -184,7 +128,7 @@ int main() {
 	    inta_append(a, getv(k, j));
 	  }
 	  zdd_push();
-	  contains_at_least_one(a);
+	  zdd_contains_at_least_1(inta_raw(a), inta_count(a));
 	  // There is at most one light bulb in this row. We record this when
 	  // we first enter the row.
 	  if (r0 == i) {

@@ -491,3 +491,57 @@ void zdd_contains_at_most_1(int *a, int count) {
   // Rejoin main branch.
   if (last) zdd_set_hilo(last, n + v);
 }
+
+// Construct ZDD of sets containing at least 1 of the elements in the given
+// list.
+void zdd_contains_at_least_1(int *a, int count) {
+  vmax_check();
+  uint32_t n = zdd_last_node();
+  // Start with ZDD of all sets.
+  int v = 1;
+  while(v < vmax) {
+    zdd_add_node(v++, 1, 1);
+  }
+  zdd_add_node(v, -1, -1);
+  if (!count) return;
+
+  // Construct new branch for when elements of the list are not found.
+  v = a[0];
+  if (1 == count) {
+    zdd_set_lo(n + v, 0);
+    return;
+  }
+
+  uint32_t n1 = zdd_next_node();
+  zdd_set_lo(n + v, n1);
+  v++;
+  for(int i = 1; i < count; i++) {
+    int v1 = a[i];
+    while(v <= v1) {
+      zdd_add_node(v++, 1, 1);
+    }
+    zdd_set_hi(zdd_last_node(), n + v);
+  }
+
+  zdd_set_lo(zdd_last_node(), 0);
+  if (vmax < v) zdd_set_hi(zdd_last_node(), 1);
+}
+
+// Construct ZDD of sets not containing any elements from the given list.
+// Assumes not every variable is on the list.
+void zdd_contains_0(int *a, int count) {
+  vmax_check();
+  zdd_push();
+  int i = 1;
+  int v1 = count ? a[0] : -1;
+  for(int v = 1; v <= vmax; v++) {
+    if (v1 == v) {
+      v1 = i < count ? a[i++] : -1;
+    } else {
+      zdd_add_node(v, 1, 1);
+    }
+  }
+  uint32_t n = zdd_last_node();
+  zdd_set_lo(n, 1);
+  zdd_set_hi(n, 1);
+}

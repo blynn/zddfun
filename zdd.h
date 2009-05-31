@@ -44,3 +44,10 @@ void zdd_contains_exactly_1(int *a, int count);
 // Construct ZDD of sets containing at most 1 of the elements in the given
 // list.
 void zdd_contains_at_most_1(int *a, int count);
+
+// Construct ZDD of sets containing at least 1 of the elements in the given
+// list.
+void zdd_contains_at_least_1(int *a, int count);
+
+// Construct ZDD of sets not containing any elements from the given list.
+void zdd_contains_0(int *a, int count);

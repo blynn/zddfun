@@ -71,8 +71,7 @@ int main() {
   /*
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      void print_it(int data) {
-	int i = (int) data;
+      void print_it(int i) {
 	printf(" %d", i);
       }
       inta_forall(board[i][j], print_it);
