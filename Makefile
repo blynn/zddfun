@@ -17,3 +17,5 @@ light: light.c $(ZDD)
 fill: fill.c $(ZDD)
 
 dom: dom.c $(ZDD)
+
+tiling_test: tiling_test.c $(ZDD)

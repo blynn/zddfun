@@ -279,7 +279,7 @@ abort:
   int solcount = 0;
   void printsol(int *v, int count) {
     char pic[rcount][ccount];
-    memset(pic, '?', rcount * ccount);
+    memset(pic, '.', rcount * ccount);
     for(int k = 0; k < count; k++) {
       for (int i = 0; i < rcount; i++) {
 	for (int j = 0; j < ccount; j++) {
@@ -305,7 +305,7 @@ abort:
 	  fn(i, j - 1);
 	  fn(i, j + 1);
 	}
-	if ('?' == pic[i][j]) {
+	if ('.' == pic[i][j]) {
 	  int count = 0;
 	  void paint(int i, int j) {
 	    scratch[i][j] = -1;
@@ -314,7 +314,7 @@ abort:
 	    count++;
 	    void bleed(int i, int j) {
 	      if (onboard(i, j) &&
-	       	  pic[i][j] == '?' && !scratch[i][j]) paint(i, j);
+	       	  pic[i][j] == '.' && !scratch[i][j]) paint(i, j);
 	    }
 	    neighbour_run(bleed, i, j);
 	  }
