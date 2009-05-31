@@ -6,21 +6,8 @@
 #include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
-
 #include <stdarg.h>
-
-extern void die(const char *err, ...)
-    __attribute__((__noreturn__))  __attribute__((format (printf, 1, 2)));
-
-void die(const char *err, ...) {
-  va_list params;
-
-  va_start(params, err);
-  vfprintf(stderr, err, params);
-  fputc('\n', stderr);
-  exit(1);
-  va_end(params);
-}
+#include "io.h"
 
 uint32_t rcount, ccount;
 uint32_t vmax;

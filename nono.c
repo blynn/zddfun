@@ -5,6 +5,8 @@
 #include <string.h>
 #include <gmp.h>
 #include "zdd.h"
+#include <stdarg.h>
+#include "io.h"
 
 static int max;
 
@@ -104,17 +106,13 @@ uint32_t compute_col_clue(int col, int *a, int size) {
 
 int main() {
   zdd_init();
-  if (!scanf("%d\n", &max)) {
-    fprintf(stderr, "input error\n");
-    exit(1);
-  }
+  if (!scanf("%d\n", &max)) die("input error");
   // Read max row clues, then max column clues.
   int clue[max * 2][max + 1];
   for(int i = 0; i < max * 2; i++) {
     char s[80];
     if (!fgets(s, 80, stdin)) {
-      fprintf(stderr, "input error\n");
-      exit(1);
+      die("input error");
     }
     char *w = s;
     for(int j = 0; j < max; j++) {

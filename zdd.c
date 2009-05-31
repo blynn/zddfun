@@ -1,4 +1,5 @@
 // ZDD stack-based calculator library.
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -7,6 +8,7 @@
 #include "memo.h"
 #include "darray.h"
 #include "zdd.h"
+#include "io.h"
 
 struct node_s {
   uint16_t v;
@@ -219,8 +221,7 @@ uint32_t zdd_intersection() {
       n->hi = hi;
       if (!(freenode % 100000)) printf("freenode = %d\n", freenode);
       if (POOL_MAX == freenode) {
-	fprintf(stderr, "pool is full\n");
-	exit(1);
+	die("pool is full");
       }
       return freenode++;
     }
@@ -257,8 +258,7 @@ uint32_t zdd_intersection() {
   uint32_t root = instantiate(it);
   // TODO: What if the intersection is node 0 or 1?
   if (root <= 1) {
-    fprintf(stderr, "root is 0 or 1!\n");
-    exit(1);
+    die("root is 0 or 1!");
   }
   if (root < z0) {
     *pool[z0] = *pool[root];
@@ -323,10 +323,7 @@ void zdd_dump() {
 }
 
 void vmax_check() {
-  if (!vmax_is_set) {
-    fprintf(stderr, "vmax not set\n");
-    exit(1);
-  }
+  if (!vmax_is_set) die("vmax not set");
 }
 
 uint32_t zdd_powerset() {

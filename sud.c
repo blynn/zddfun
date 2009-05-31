@@ -4,6 +4,8 @@
 #include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
+#include <stdarg.h>
+#include "io.h"
 
 // Construct ZDD of sets containing exactly 1 digit at for all boxes
 // (r, c), starting at pool entry d.
@@ -195,27 +197,15 @@ int main() {
   for(int i = 0; i < 9; i++) {
     for(int j = 0; j < 9; j++) {
       int c = getchar();
-      if (EOF == c) {
-	fprintf(stderr, "unexpected EOF\n");
-	exit(1);
-      }
-      if ('\n' == c) {
-	fprintf(stderr, "unexpected newline\n");
-	exit(1);
-      }
+      if (EOF == c) die("unexpected EOF");
+      if ('\n' == c) die("unexpected newline");
       if (c >= '1' && c <= '9') {
 	darray_append(list, (void *) (81 * i + 9 * j + c - '0'));
       }
     }
     int c = getchar();
-    if (EOF == c) {
-      fprintf(stderr, "unexpected EOF\n");
-      exit(1);
-    }
-    if ('\n' != c) {
-      fprintf(stderr, "expected newline\n");
-      exit(1);
-    }
+    if (EOF == c) die("unexpected EOF");
+    if ('\n' != c) die("expected newline");
   }
   darray_append(list, (void *) -1);
   contains_all((int *) list->item);
