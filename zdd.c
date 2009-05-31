@@ -19,7 +19,6 @@ typedef struct node_s node_t[1];
 
 static node_t pool[1<<24];
 static uint32_t freenode, POOL_MAX = (1<<24) - 1;
-static mpz_ptr count[1<<24];
 static darray_t stack;
 static uint16_t vmax;
 static char vmax_is_set;
@@ -69,6 +68,7 @@ uint32_t zdd_set_root(uint32_t root) {
 }
 
 void zdd_count(mpz_ptr z) {
+  static mpz_ptr count[1<<24];
   uint32_t root = zdd_root();
   // Count elements in ZDD rooted at node n.
   void get_count(uint32_t n) {
@@ -432,4 +432,62 @@ void zdd_contains_exactly_1(int *a, int count) {
   uint32_t last = zdd_last_node();
   if (zdd_lo(last) > last) zdd_set_lo(last, 1);
   if (zdd_hi(last) > last) zdd_set_hi(last, 1);
+}
+
+// Construct ZDD of sets containing at most 1 of the elements in the given
+// list.
+void zdd_contains_at_most_1(int *a, int count) {
+  vmax_check();
+  zdd_push();
+  uint32_t n = zdd_last_node();
+  // Start with ZDD of all sets.
+  int v = 1;
+  while(v < vmax) {
+    zdd_add_node(v++, 1, 1);
+  }
+  zdd_add_node(v, -1, -1);
+  // If there is nothing or only one element in the list then we are done.
+  if (count <= 1) return;
+
+  // At this point, there are at least two elements in the list.
+  // Construct new branch for when elements of the list are detected. We
+  // branch off at the first element, then hop over all remaining elements,
+  // then rejoin.
+  v = a[0];
+
+  uint32_t n1 = zdd_next_node();
+  zdd_set_hi(n + v, n1);
+  v++;
+  uint32_t last = 0;
+  for(int i = 1; i < count; i++) {
+    int v1 = a[i];
+    while(v < v1) {
+      last = zdd_add_node(v++, 1, 1);
+    }
+    zdd_set_hi(n + v, zdd_next_node());
+    v++;
+  }
+  // v = last element of list + 1
+
+  // The HI edges of the last element of the list, and more generally, the last
+  // sequence of the list must be corrected.
+  for(int v1 = a[count - 1]; zdd_hi(n + v1) == zdd_next_node(); v1--) {
+    zdd_set_hi(n + v1, n + v);
+  }
+
+  if (vmax < v) {
+    // Special case: list ends with vmax. Especially troublesome if there's
+    // a little sequence, e.g. vmax - 2, vmax - 1, vmax.
+    for(v = vmax; zdd_hi(n + v) > n + vmax; v--) {
+      zdd_set_hi(n + v, 1);
+    }
+    // The following line is only needed if we added any nodes to the branch,
+    // but is harmless if we execute it unconditionally since the last node
+    // to be added was (!vmax ? 1 : 1).
+    zdd_set_hilo(zdd_last_node(), 1);
+    return;
+  }
+
+  // Rejoin main branch.
+  if (last) zdd_set_hilo(last, n + v);
 }

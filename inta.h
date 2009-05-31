@@ -55,7 +55,7 @@ Returns the number of pointers held in ''a''.
 */
 static inline int inta_count(const inta_ptr a) { return a->count; }
 
-static inline int *inta_itemptr(const inta_ptr a) { return a->item; }
+static inline int *inta_raw(const inta_ptr a) { return a->item; }
 
 static inline int inta_set_count(inta_ptr a, int n) { return a->count = n; }
 

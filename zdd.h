@@ -40,3 +40,7 @@ void zdd_forall(void (*fn)(int *, int));
 
 // Construct ZDD of sets containing exactly 1 of the elements in the given list.
 void zdd_contains_exactly_1(int *a, int count);
+
+// Construct ZDD of sets containing at most 1 of the elements in the given
+// list.
+void zdd_contains_at_most_1(int *a, int count);

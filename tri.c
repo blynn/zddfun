@@ -83,8 +83,7 @@ int main() {
   */
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
-      zdd_contains_exactly_1(inta_itemptr(board[i][j]),
-	  inta_count(board[i][j]));
+      zdd_contains_exactly_1(inta_raw(board[i][j]), inta_count(board[i][j]));
       if (j) zdd_intersection();
     }
   }

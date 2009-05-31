@@ -208,7 +208,7 @@ int main() {
     if ('\n' != c) die("expected newline");
   }
   inta_append(list, -1);
-  contains_all(inta_itemptr(list));
+  contains_all(inta_raw(list));
   inta_clear(list);
 
   global_one_digit_per_box();

@@ -63,7 +63,7 @@ Returns the number of pointers held in ''a''.
 */
 static inline int darray_count(const darray_ptr a) { return a->count; }
 
-static inline typ_t *darray_itemptr(const darray_ptr a) { return a->item; }
+static inline typ_t *darray_raw(const darray_ptr a) { return a->item; }
 
 static inline int darray_set_count(darray_ptr a, int n) { return a->count = n; }
 

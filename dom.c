@@ -89,7 +89,7 @@ int main() {
 
   for(int i = 0; i < rcount; i++) {
     for(int j = 0; j < ccount; j++) {
-      zdd_contains_exactly_1(inta_itemptr(list[i][j]), inta_count(list[i][j]));
+      zdd_contains_exactly_1(inta_raw(list[i][j]), inta_count(list[i][j]));
       if (i || j) zdd_intersection();
     }
   }
@@ -100,7 +100,7 @@ int main() {
   qsort(tally, n, sizeof(inta_t), compar);
   for(int i = 0; i < n; i++) {
     //printf("%d/%d\n", i + 1, n);
-    zdd_contains_exactly_1(inta_itemptr(tally[i]), inta_count(tally[i]));
+    zdd_contains_exactly_1(inta_raw(tally[i]), inta_count(tally[i]));
     zdd_intersection();
   }
 
