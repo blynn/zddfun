@@ -9,49 +9,10 @@
 #include <stdarg.h>
 #include "io.h"
 
-uint32_t rcount, ccount;
-uint32_t vmax;
-
-// Construct ZDD of sets containing exactly 1 element for each interval
-// [a_k, a_{k+1}) in given list. List must start with a_0 = 1, while there is an
-// implied vmax + 1 at end of list, so the last interval is [a_n, vmax + 1).
-//
-// The ZDD begins:
-//   1 ... 2
-//   1 --- a_1
-//   2 ... 3
-//   2 --- a_1
-//   ...
-//   a_1 - 1 ... F
-//   a_1 - 1 --- a_1
-//
-// and so on:
-//   a_k ... a_k + 1
-//   a_k --- a_{k+1}
-// and so on until vmax --- F, vmax ... T.
-void one_per_interval(const int* list, int count) {
-  zdd_push();
-  // Check list[0] is 1.
-  int i = 0;
-  uint32_t n = zdd_last_node();
-  int get() {
-    i++;
-    //return i < inta_count(a) ? inta_at(a, i) : -1;
-    return i < count ? list[i] : -1;
-  }
-  int target = get();
-  for (int v = 1; v <= vmax; v++) {
-    zdd_abs_node(v, n + v + 1, target > 0 ? n + target : 1);
-    if (v == target - 1 || v == vmax) {
-      zdd_set_lo(zdd_last_node(), 0);
-      target = get();
-    }
-  }
-}
-
 int main() {
   zdd_init();
 
+  uint32_t rcount, ccount;
   if (!scanf("%d %d\n", &rcount, &ccount)) die("input error");
   int board[rcount][ccount];
   inta_t white[rcount][ccount];
@@ -245,7 +206,6 @@ abort:
     }
   }
   zdd_set_vmax(v - 1);
-  vmax = v - 1;
   // Each clue n must be covered by exactly one n-polyomino.
   for (int i = 0; i < rcount * ccount; i++) {
     if (inta_count(must[i]) > 0) {

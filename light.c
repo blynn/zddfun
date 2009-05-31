@@ -8,65 +8,14 @@
 #include <stdarg.h>
 #include "io.h"
 
-uint32_t rcount, ccount;
-uint32_t vmax;
-
-// Construct ZDD of sets containing exactly n of the elements in the
-// given list.
-void contains_exactly_n(inta_t a, int n) {
-  zdd_push();
-  uint32_t tab[inta_count(a)][n + 1];
-  memset(tab, 0, inta_count(a) * (n + 1) * sizeof(uint32_t));
-  uint32_t recurse(int i, int n) {
-    int v = -1 == i ? 1 : inta_at(a, i) + 1;
-    uint32_t root;
-    if (i == inta_count(a) - 1) {
-      // n is irrelevant when we reach the end of the list.
-      if (-1 != i && tab[i][0]) return tab[i][0];
-      if (vmax < v) {
-	root = 1;
-      } else {
-        root = zdd_next_node();
-	while(v < vmax) zdd_add_node(v++, 1, 1);
-	zdd_add_node(v, -1, -1);
-      }
-      if (-1 != i) tab[i][0] = root;
-      return root;
-    }
-    if (-1 != i && tab[i][n]) return tab[i][n];
-    int v1 = inta_at(a, i + 1);
-    int is_empty = v == v1;
-    root = zdd_next_node();
-    while(v < v1) zdd_add_node(v++, 1, 1);
-    if (!n) {
-      if (is_empty) {
-	root = recurse(i + 1, n);
-      } else {
-	uint32_t last = zdd_last_node();
-	zdd_set_hilo(last, recurse(i + 1, n));
-      }
-      if (-1 != i) tab[i][n] = root;
-      return root;
-    }
-    uint32_t last = zdd_add_node(v, 0, 0);
-    zdd_set_hi(last, recurse(i + 1, n - 1));
-    if (n < inta_count(a) - i - 1) {
-      zdd_set_lo(last, recurse(i + 1, n));
-    }
-    if (-1 != i) tab[i][n] = root;
-    return root;
-  }
-  recurse(-1, n);
-}
-
 int main() {
   zdd_init();
 
+  uint32_t rcount, ccount;
   if (!scanf("%d %d\n", &rcount, &ccount)) die("input error");
   int board[rcount][ccount];
   uint32_t getv(uint32_t i, uint32_t j) { return ccount * i + j + 1; }
-  vmax = getv(rcount - 1, ccount - 1);
-  zdd_set_vmax(vmax);
+  zdd_set_vmax(getv(rcount - 1, ccount - 1));
   inta_t a;
   inta_init(a);
 
@@ -162,7 +111,7 @@ int main() {
 	  check(i, j - 1);
 	  check(i, j + 1);
 	  check(i + 1, j);
-          contains_exactly_n(a, board[i][j]);
+          zdd_contains_exactly_n(board[i][j], inta_raw(a), inta_count(a));
 	  zdd_intersection();
       }
     }

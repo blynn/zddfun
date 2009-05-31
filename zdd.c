@@ -378,7 +378,7 @@ uint32_t zdd_size() {
 
 // Construct ZDD of sets containing exactly 1 of the elements in the given list.
 // Zero suppression means we must treat sequences in the list carefully.
-void zdd_contains_exactly_1(int *a, int count) {
+void zdd_contains_exactly_1(const int *a, int count) {
   vmax_check();
   zdd_push();
   int v = 1;
@@ -436,7 +436,7 @@ void zdd_contains_exactly_1(int *a, int count) {
 
 // Construct ZDD of sets containing at most 1 of the elements in the given
 // list.
-void zdd_contains_at_most_1(int *a, int count) {
+void zdd_contains_at_most_1(const int *a, int count) {
   vmax_check();
   zdd_push();
   uint32_t n = zdd_last_node();
@@ -494,7 +494,7 @@ void zdd_contains_at_most_1(int *a, int count) {
 
 // Construct ZDD of sets containing at least 1 of the elements in the given
 // list.
-void zdd_contains_at_least_1(int *a, int count) {
+void zdd_contains_at_least_1(const int *a, int count) {
   vmax_check();
   uint32_t n = zdd_last_node();
   // Start with ZDD of all sets.
@@ -529,7 +529,7 @@ void zdd_contains_at_least_1(int *a, int count) {
 
 // Construct ZDD of sets not containing any elements from the given list.
 // Assumes not every variable is on the list.
-void zdd_contains_0(int *a, int count) {
+void zdd_contains_0(const int *a, int count) {
   vmax_check();
   zdd_push();
   int i = 1;
@@ -544,4 +544,104 @@ void zdd_contains_0(int *a, int count) {
   uint32_t n = zdd_last_node();
   zdd_set_lo(n, 1);
   zdd_set_hi(n, 1);
+}
+
+// Construct ZDD of sets containing exactly 1 element for each interval
+// [a_k, a_{k+1}) in given list. List must start with a_0 = 1, while there is an
+// implied vmax + 1 at end of list, so the last interval is [a_n, vmax + 1).
+//
+// The ZDD begins:
+//   1 ... 2
+//   1 --- a_1
+//   2 ... 3
+//   2 --- a_1
+//   ...
+//   a_1 - 1 ... F
+//   a_1 - 1 --- a_1
+//
+// and so on:
+//   a_k ... a_k + 1
+//   a_k --- a_{k+1}
+// and so on until vmax --- F, vmax ... T.
+void zdd_1_per_interval(const int* list, int count) {
+  vmax_check();
+  zdd_push();
+  // Check list[0] is 1.
+  int i = 0;
+  uint32_t n = zdd_last_node();
+  int get() {
+    i++;
+    //return i < inta_count(a) ? inta_at(a, i) : -1;
+    return i < count ? list[i] : -1;
+  }
+  int target = get();
+  for (int v = 1; v <= vmax; v++) {
+    zdd_abs_node(v, n + v + 1, target > 0 ? n + target : 1);
+    if (v == target - 1 || v == vmax) {
+      zdd_set_lo(zdd_last_node(), 0);
+      target = get();
+    }
+  }
+}
+
+// Construct ZDD of sets containing exactly n of the elements in the
+// given list.
+void zdd_contains_exactly_n(int n, const int *a, int count) {
+  zdd_push();
+  if (n > count) {
+    die("unhandled special case (should return empty family");
+  }
+  // Lookup table for sub-ZDDs we construct recursively.
+  uint32_t tab[count][n + 1];
+  memset(tab, 0, count * (n + 1) * sizeof(uint32_t));
+  uint32_t recurse(int i, int n) {
+    // The outermost invocation is a special case, as other invocations
+    // assume part of the ZDD has already been built. We have i == -1
+    // during this special case.
+    int v = -1 == i ? 1 : a[i] + 1;
+    uint32_t root;
+    if (i == count - 1) {
+      // Base case: by now, n should be zero, so finish off the ZDD with
+      // everything leading to TRUE.
+      // We can reach here even in the first invocation of recurse(); this
+      // happens if there is nothing in the list.
+      if (-1 != i && tab[i][0]) return tab[i][0];
+      if (vmax < v) {
+	root = 1;
+      } else {
+        root = zdd_next_node();
+	while(v < vmax) zdd_add_node(v++, 1, 1);
+	zdd_add_node(v, -1, -1);
+      }
+      if (-1 != i) tab[i][0] = root;
+      return root;
+    }
+    if (-1 != i && tab[i][n]) return tab[i][n];
+    int v1 = a[i + 1];
+    int is_empty = v == v1;
+    root = zdd_next_node();
+    while(v < v1) zdd_add_node(v++, 1, 1);
+    if (!n) {
+      if (is_empty) {
+	root = recurse(i + 1, n);
+      } else {
+	uint32_t last = zdd_last_node();
+	zdd_set_hilo(last, recurse(i + 1, n));
+      }
+      if (-1 != i) tab[i][n] = root;
+      return root;
+    }
+    uint32_t last = zdd_add_node(v, 0, 0);
+    // If we include this variable, then that's one down, n - 1 more to go
+    // in the remaining.
+    zdd_set_hi(last, recurse(i + 1, n - 1));
+    if (n < count - i - 1) {
+      // If there are enough unexamined nodes we can leave this variable
+      // out and still make the quota.
+      zdd_set_lo(last, recurse(i + 1, n));
+    }
+    if (-1 != i) tab[i][n] = root;
+    return root;
+  }
+  recurse(-1, n);
 }
