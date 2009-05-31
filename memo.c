@@ -70,8 +70,7 @@ static int firstcritbit(const char *key0, const char *key1) {
 }
 
 static int testbit(const char *key, int bit) {
-  int i = bit >> 3;
-  return chartestbit(key[i], (bit & 7));
+  return chartestbit(key[bit >> 3], (bit & 7));
 }
 
 static memo_leaf_ptr memo_leaf_at(memo_node_ptr n, const char *key) {
@@ -83,7 +82,7 @@ static memo_leaf_ptr memo_leaf_at(memo_node_ptr n, const char *key) {
     }
     if (len < p->critbit) {
       do {
-	  p = p->left;
+	p = p->left;
       } while (MEMO_NODE == p->type);
       return (memo_leaf_ptr) p;
     }
@@ -474,6 +473,9 @@ int memo_it_insert_u(memo_it *it,
     return 1;
   }
 
+  // The stack may seem cumbersome, but it seems to beat simpler solutions:
+  // it appears we usually backtrack only a little, so rather than start from
+  // the root again, we walk back up the tree.
   memo_node_ptr stack_space[put_stack_size];
   memo_node_ptr *stack = stack_space;
   int stack_max = put_stack_size;
