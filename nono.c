@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <gmp.h>
 #include "zdd.h"
 #include <stdarg.h>
 #include "io.h"

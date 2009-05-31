@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
 #include <stdarg.h>
@@ -180,6 +179,7 @@ int main() {
   int board[rcount][ccount];
   uint32_t getv(uint32_t i, uint32_t j) { return ccount * i + j + 1; }
   vmax = getv(rcount - 1, ccount - 1);
+  zdd_set_vmax(vmax);
   darray_t a;
   darray_init(a);
 
@@ -282,33 +282,34 @@ int main() {
     zdd_intersection();
   }
 
-  // Print lexicographically largest solution, assuming it exists.
-  uint32_t v = zdd_root();
-  while(v != 1) {
-    int r = zdd_v(v) - 1;
-    int c = r % ccount;
-    r /= ccount;
-    board[r][c] = -3;
-    v = zdd_hi(v);
-  }
-  for (int i = 0; i < rcount; i++) {
-    for (int j = 0; j < ccount; j++) {
-      switch(board[i][j]) {
-	case -3:
-	  putchar('*');
-	  break;
-	case -2:
-	  putchar('x');
-	  break;
-	case -1:
-	  putchar('.');
-	  break;
-	default:
-	  putchar('0' + board[i][j]);
-	  break;
+  void printsol(int *v, int vcount) {
+    char pic[rcount][ccount];
+    memset(pic, '.', rcount * ccount);
+    for(int i = 0; i < vcount; i++) {
+      int r = v[i] - 1;
+      int c = r % ccount;
+      r /= ccount;
+      pic[r][c] = '*';
+    }
+
+    for (int i = 0; i < rcount; i++) {
+      for (int j = 0; j < ccount; j++) {
+	switch(board[i][j]) {
+	  case -2:
+	    putchar('x');
+	    break;
+	  case 0 ... 4:
+	    putchar('0' + board[i][j]);
+	    break;
+	  default:
+	    putchar(pic[i][j]);
+	}
       }
+      putchar('\n');
     }
     putchar('\n');
   }
+
+  zdd_forall(printsol);
   return 0;
 }

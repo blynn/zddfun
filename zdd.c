@@ -68,25 +68,40 @@ uint32_t zdd_set_root(uint32_t root) {
   return i;
 }
 
-// Count elements in ZDD rooted at node n.
-static void get_count(uint32_t n) {
-  if (count[n]) return;
-  count[n] = malloc(sizeof(mpz_t));
-  mpz_init(count[n]);
-  if (n <= 1) {
-    mpz_set_ui(count[n], n);
-    return;
+void zdd_count(mpz_ptr z) {
+  uint32_t root = zdd_root();
+  // Count elements in ZDD rooted at node n.
+  void get_count(uint32_t n) {
+    if (count[n]) return;
+    count[n] = malloc(sizeof(mpz_t));
+    mpz_init(count[n]);
+    if (n <= 1) {
+      mpz_set_ui(count[n], n);
+      return;
+    }
+    uint32_t x = pool[n]->lo;
+    uint32_t y = pool[n]->hi;
+    if (!count[x]) get_count(x);
+    if (!count[y]) get_count(y);
+    if (n == root) {
+      mpz_add(z, count[x], count[y]);
+    } else {
+      mpz_add(count[n], count[x], count[y]);
+    }
   }
-  uint32_t x = pool[n]->lo;
-  uint32_t y = pool[n]->hi;
-  if (!count[x]) get_count(x);
-  if (!count[y]) get_count(y);
-  mpz_add(count[n], count[x], count[y]);
-  gmp_printf("%d: %Zd\n", n, count[n]);
-}
 
-void zdd_count() {
-  get_count(zdd_root());
+  get_count(root);
+
+  void clearz(uint32_t n) {
+    if (!count[n]) return;
+    mpz_clear(count[n]);
+    free(count[n]);
+    count[n] = NULL;
+    if (n <= 1) return;
+    clearz(pool[n]->lo);
+    clearz(pool[n]->hi);
+  }
+  clearz(root);
 }
 
 uint32_t zdd_abs_node(uint32_t v, uint32_t lo, uint32_t hi) {
@@ -350,4 +365,8 @@ void zdd_forall(void (*fn)(int *, int)) {
     vcount--;
   }
   recurse(zdd_root());
+}
+
+uint32_t zdd_size() {
+  return zdd_next_node() - zdd_root() + 2;
 }

@@ -1,7 +1,7 @@
+// Solve a sudoku with ZDDs.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
 #include <stdarg.h>

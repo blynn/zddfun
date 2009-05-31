@@ -12,4 +12,3 @@ void die(const char *err, ...) {
   exit(1);
   va_end(params);
 }
-

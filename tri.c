@@ -1,10 +1,12 @@
 // How many ways can you tile a chessboard with 1-, 2- and 3-polyonominos?
+// Using the obvious approach with ZDDs, we should end up with a 468-variable
+// 512227-node ZDD describing 92109458286284989468604 solutions.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <gmp.h>
 #include "darray.h"
 #include "zdd.h"
+#include "io.h"
 
 uint32_t vmax;
 
@@ -123,6 +125,8 @@ int main() {
   }
 
   vmax = v - 1;
+  printf("variables: %d\n", vmax);
+  EXPECT(468 == vmax);
 
   /*
   for (int i = 0; i < 8; i++) {
@@ -148,7 +152,18 @@ int main() {
     zdd_intersection();
   }
 
-  zdd_dump();
-  zdd_count();
+  printf("nodes: %d\n", zdd_size());
+  EXPECT(zdd_size() == 512227);
+  mpz_t z, answer;
+  mpz_init(z);
+  mpz_init(answer);
+  mpz_set_str(answer, "92109458286284989468604", 0);
+
+  zdd_count(z);
+  gmp_printf("%Zd\n", z);
+  EXPECT(!mpz_cmp(z, answer));
+
+  mpz_clear(z);
+  mpz_clear(answer);
   return 0;
 }
