@@ -96,7 +96,7 @@ void contains_exactly_one(darray_t a) {
       // Find length of consecutive sequence.
       int k;
       for(k = 0;
-	  i + k < darray_count(a) && v + k == (int) darray_at(a, i + k); k++);
+          i + k < darray_count(a) && v + k == (int) darray_at(a, i + k); k++);
       uint32_t n = zdd_next_node();
       uint32_t h = v + k > vmax ? 1 : n + k + (darray_count(a) != i + k);
       if (i >= 1) {
@@ -434,24 +434,68 @@ abort:
     // the simplest cases.
     for (int i = 0; i < rcount; i++) {
       for (int j = 0; j < ccount; j++) {
+	int scratch[rcount][ccount];
+	memset(scratch, 0, rcount * ccount * sizeof(int));
+
+	void neighbour_run(void (*fn)(int, int), int i, int j) {
+	  fn(i - 1, j);
+	  fn(i + 1, j);
+	  fn(i, j - 1);
+	  fn(i, j + 1);
+	}
 	if ('?' == pic[i][j]) {
 	  int count = 0;
-	  int is1 = 1;
-	  void check1(int i, int j) {
-	    if (onboard(i, j)) {
-	      if ('?' == pic[i][j]) is1 = 0;
-	      if ('1' == pic[i][j]) count++;
+	  void paint(int i, int j) {
+	    scratch[i][j] = -1;
+	    darray_append(r, (void *) i);
+	    darray_append(c, (void *) j);
+	    count++;
+	    void bleed(int i, int j) {
+	      if (onboard(i, j) &&
+	       	  pic[i][j] == '?' && !scratch[i][j]) paint(i, j);
 	    }
+	    neighbour_run(bleed, i, j);
 	  }
-	  check1(i - 1, j);
-	  check1(i + 1, j);
-	  check1(i, j - 1);
-	  check1(i, j + 1);
-	  if (is1) {
-	    // Return if we have a single ? next to at least one 1.
-	    if (count) return;
+	  paint(i, j);
+	  if (count == 1) {
+	    int n1 = 0;
+	    void count1(int i, int j) {
+	      if (onboard(i, j) && pic[i][j] == '1') n1++;
+	    }
+	    neighbour_run(count1, i, j);
+	    if (n1) {
+	      darray_remove_all(r);
+	      darray_remove_all(c);
+	      return;
+	    }
 	    pic[i][j] = '1';
+	  } else if (count == 2) {
+	    int n1 = 0;
+	    void count1(int i, int j) {
+	      if (onboard(i, j) && pic[i][j] == '2') {
+		n1++;
+	      }
+	    }
+	    int x = (int) darray_at(r, 0);
+	    int y = (int) darray_at(c, 0);
+	    neighbour_run(count1, x, y);
+	    x = (int) darray_at(r, 1);
+	    y = (int) darray_at(c, 1);
+	    neighbour_run(count1, x, y);
+	    if (n1) {
+	      darray_remove_all(r);
+	      darray_remove_all(c);
+	      return;
+	    }
+	    x = (int) darray_at(r, 0);
+	    y = (int) darray_at(c, 0);
+	    pic[x][y] = '2';
+	    x = (int) darray_at(r, 1);
+	    y = (int) darray_at(c, 1);
+	    pic[x][y] = '2';
 	  }
+	  darray_remove_all(r);
+	  darray_remove_all(c);
 	}
       }
     }
