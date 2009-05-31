@@ -496,6 +496,7 @@ void zdd_contains_at_most_1(const int *a, int count) {
 // list.
 void zdd_contains_at_least_1(const int *a, int count) {
   vmax_check();
+  zdd_push();
   uint32_t n = zdd_last_node();
   // Start with ZDD of all sets.
   int v = 1;

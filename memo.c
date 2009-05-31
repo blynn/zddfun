@@ -69,7 +69,7 @@ static int firstcritbit(const char *key0, const char *key1) {
   return -critbit;
 }
 
-static int testbit(const char *key, int bit) {
+static inline int testbit(const char *key, int bit) {
   return chartestbit(key[bit >> 3], (bit & 7));
 }
 
@@ -482,7 +482,6 @@ int memo_it_insert_u(memo_it *it,
   int i = 0;
   memo_node_ptr t = memo->root;
   stack[i] = t;
-  i++;
   while (MEMO_NODE == t->type) {
     // No length check: all keys should be the same length.
     if (!testbit((char *) key, t->critbit)) {
@@ -490,6 +489,7 @@ int memo_it_insert_u(memo_it *it,
     } else {
       t = t->right;
     }
+    i++;
     if (i == stack_max) {
       // Badly balanced tree? This is going to cost us.
       stack_max *= 2;
@@ -499,7 +499,6 @@ int memo_it_insert_u(memo_it *it,
       } else stack = realloc(stack, stack_max * sizeof(memo_node_ptr));
     }
     stack[i] = t;
-    i++;
   }
 
   memo_leaf_ptr leaf = (memo_leaf_ptr) t;
@@ -516,29 +515,25 @@ int memo_it_insert_u(memo_it *it,
   pnode->type = MEMO_NODE;
   pnode->critbit = abs(res) - 1;
 
-  // Decrement i so it points to top of stack.
-  i--;
-  // Last pointer on stack is a leaf, so decrement before test.
-  do {
-    i--;
-  } while(i >= 0 && pnode->critbit < stack[i]->critbit);
+  // Walk back up tree to find place to insert new node.
+  while(i > 0 && pnode->critbit < stack[i - 1]->critbit) i--;
 
   if (res > 0) {
     // Key is bigger, therefore it goes on the right.
-    pnode->left = stack[i + 1];
+    pnode->left = stack[i];
     pnode->right = (memo_node_ptr) pleaf;
   } else {
     // Key is smaller, therefore it goes on the left.
     pnode->left = (memo_node_ptr) pleaf;
-    pnode->right = stack[i + 1];
+    pnode->right = stack[i];
   }
-  if (i < 0) {
+  if (!i) {
     memo->root = pnode;
   } else {
-    if (stack[i]->left == stack[i + 1]) {
-      stack[i]->left = pnode;
+    if (stack[i - 1]->left == stack[i]) {
+      stack[i - 1]->left = pnode;
     } else {
-      stack[i]->right = pnode;
+      stack[i - 1]->right = pnode;
     }
   }
   if (stack != stack_space) free(stack);

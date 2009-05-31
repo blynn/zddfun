@@ -51,6 +51,7 @@ int main() {
   // represents which square.
   zdd_contains_0(inta_raw(a), inta_count(a));
 
+  int colcount = 0;
   for (uint32_t i = 0; i < rcount; i++) {
     inta_remove_all(a);
     zdd_contains_at_most_1(inta_raw(a), inta_count(a));
@@ -76,7 +77,6 @@ int main() {
 	  for(int k = i + 1; k < rcount && board[k][j] == -1; k++) {
 	    inta_append(a, getv(k, j));
 	  }
-	  zdd_push();
 	  zdd_contains_at_least_1(inta_raw(a), inta_count(a));
 	  // There is at most one light bulb in this row. We record this when
 	  // we first enter the row.
@@ -95,7 +95,8 @@ int main() {
 	      inta_append(a, getv(i, k));
 	    }
 	    zdd_contains_at_most_1(inta_raw(a), inta_count(a));
-	    zdd_intersection();
+	    // Defer the intersection.
+	    colcount++;
 	  }
 	  zdd_intersection();
 	  break;
@@ -116,6 +117,11 @@ int main() {
       }
     }
     zdd_intersection();
+  }
+
+  while(colcount) {
+    zdd_intersection();
+    colcount--;
   }
 
   void printsol(int *v, int vcount) {

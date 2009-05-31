@@ -26,11 +26,8 @@ void test_monomino_tilings() {
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
       zdd_contains_exactly_1(inta_raw(board[i][j]), inta_count(board[i][j]));
-      if (j) zdd_intersection();
+      zdd_intersection();
     }
-  }
-  for (int i = 6; i >= 0; i--) {
-    zdd_intersection();
   }
 
   printf("nodes: %d\n", zdd_size());
@@ -79,11 +76,8 @@ void test_domino_tilings() {
   for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
       zdd_contains_exactly_1(inta_raw(board[i][j]), inta_count(board[i][j]));
-      if (j) zdd_intersection();
+      zdd_intersection();
     }
-  }
-  for (int i = 6; i >= 0; i--) {
-    zdd_intersection();
   }
 
   printf("nodes: %d\n", zdd_size());
@@ -177,9 +171,11 @@ void test_123_tilings() {
       zdd_contains_exactly_1(inta_raw(board[i][j]), inta_count(board[i][j]));
       if (j) zdd_intersection();
     }
-  }
-  for (int i = 6; i >= 0; i--) {
-    zdd_intersection();
+    int n = i + 1;
+    while (!(n & 1)) {
+      n >>= 1;
+      zdd_intersection();
+    }
   }
 
   printf("nodes: %d\n", zdd_size());

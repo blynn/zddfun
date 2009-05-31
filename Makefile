@@ -4,7 +4,7 @@ CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc
 
 ZDD:=memo.c darray.c zdd.c io.c inta.c
 
-target: fill
+target: loop
 
 sud: sud.c $(ZDD)
 
@@ -19,3 +19,5 @@ fill: fill.c $(ZDD)
 dom: dom.c $(ZDD)
 
 tiling_test: tiling_test.c $(ZDD)
+
+loop: loop.c $(ZDD)
