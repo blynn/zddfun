@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "darray.h"
+#include "inta.h"
 #include "zdd.h"
 #include <stdarg.h>
 #include "io.h"
@@ -192,24 +192,24 @@ int main() {
   // Number rows and columns from 0. Digits are integers [1..9].
   // The digit d at (r, c) is represented by element 81 r + 9 c + d.
 
-  darray_t list;
-  darray_init(list);
+  inta_t list;
+  inta_init(list);
   for(int i = 0; i < 9; i++) {
     for(int j = 0; j < 9; j++) {
       int c = getchar();
       if (EOF == c) die("unexpected EOF");
       if ('\n' == c) die("unexpected newline");
       if (c >= '1' && c <= '9') {
-	darray_append(list, (void *) (81 * i + 9 * j + c - '0'));
+	inta_append(list, 81 * i + 9 * j + c - '0');
       }
     }
     int c = getchar();
     if (EOF == c) die("unexpected EOF");
     if ('\n' != c) die("expected newline");
   }
-  darray_append(list, (void *) -1);
-  contains_all((int *) list->item);
-  darray_clear(list);
+  inta_append(list, -1);
+  contains_all(inta_itemptr(list));
+  inta_clear(list);
 
   global_one_digit_per_box();
   zdd_intersection();
@@ -248,6 +248,10 @@ int main() {
   }
 
   zdd_dump();
-  zdd_count();
+  mpz_t z;
+  mpz_init(z);
+  zdd_count(z);
+  gmp_printf("Solution count: %Zd\n", z);
+  mpz_clear(z);
   return 0;
 }

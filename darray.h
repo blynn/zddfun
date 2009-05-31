@@ -41,7 +41,7 @@ static inline typ_t darray_at(darray_t a, int i)
   return a->item[i];
 }
 
-typ_t darray_at_test(darray_ptr a, int (*test)(void *));
+typ_t darray_at_test(darray_ptr a, int (*test)(typ_t));
 
 int darray_index_of(darray_ptr a, typ_t p);
 int darray_index_of_test(darray_ptr a, int (*test)(typ_t));

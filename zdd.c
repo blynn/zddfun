@@ -367,6 +367,11 @@ void zdd_forall(void (*fn)(int *, int)) {
   recurse(zdd_root());
 }
 
+uint16_t zdd_vmax() {
+  vmax_check();
+  return vmax;
+}
+
 uint32_t zdd_size() {
   return zdd_next_node() - zdd_root() + 2;
 }

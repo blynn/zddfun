@@ -3,6 +3,7 @@
 
 void zdd_init();
 void zdd_check();
+uint16_t zdd_vmax();
 uint16_t zdd_set_vmax(int i);
 // Call before computing a new ZDD on the stack.
 void zdd_push();
