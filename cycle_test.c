@@ -9,6 +9,7 @@
 //   9x9: 2318527339461266
 // 10x10: 27359264067916806102
 // 11x11: 988808811046283595068100
+// 12x12: 109331355810135629946698361372109331355810135629946698361372
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -107,9 +108,15 @@ void compute_grid_graph(int max, int want_print) {
   //
   // When picking an edge that closes a loop, we see if we have picked edges
   // outside the loop; if so, the set of edges is not a simple loop.
+  //
+  // We keep our state in a char *, so this cannot work on 256x256 grids.
+  // Our crit-bit trie uses NULL-terminated strings as keys, so 0 cannot appear
+  // in our state. Thus, in the state:
+  //   -1 means we've already picked two edges involving this vertex
+  //    n means the other end is n + au[e] - 1
   memo_t cache[zdd_vmax() + 1];
   for(int i = 0; i <= zdd_vmax(); i++) memo_init(cache[i]);
-  uint32_t recurse(int e, char *state, char start, int count) {
+  uint32_t recurse(int e, char *state, int start, int count) {
     char newstate[max + 1];
     int newcount = 0;
     memo_it it = NULL;
@@ -135,27 +142,29 @@ void compute_grid_graph(int max, int want_print) {
       if (j > count - 1) die("bad vertex or edge numbering");
       for (int i = 0; i < j; i++) {
 	int otherend = state[i];
-	if (otherend != -1 && otherend != start + i) {
-	  // Vertex start + i is dangling, and we can no longer connect it to
-	  // our loop.
+	if (otherend != -1 && otherend - 1 != i) {
+	  // Vertex start - 1 + i is dangling, and we can no longer connect it
+	  // to our loop.
 	  return memoize(0);
 	}
       }
       // Copy over the part of the state that is still relevant.
       while(j < count) {
-	newstate[newcount++] = state[j++];
+	int n = state[j];
+	newstate[newcount++] = n < 0 ? -1 : n + start - au[e];
+	j++;
       }
       // Add vertices that now matter to our state.
       j += start;
       while(j <= av[e]) {
-	newstate[newcount++] = j++;
+	newstate[newcount++] = j++ - au[e] + 1;
       }
       // By now newcount == av[e] - au[e].
     }
 
     if (e == zdd_vmax()) {
       // We've come to the last edge, so our choices so far must have either...
-      if (newstate[0] == au[e]) {
+      if (newstate[0] == 1) {
 	// ... produced a complete loop already:
 	// We want !V ? TRUE : FALSE. In a ZDD, this gets compressed to
 	// simply TRUE.
@@ -180,11 +189,11 @@ void compute_grid_graph(int max, int want_print) {
     if (u == -1 || v == -1) {
       // At least one of the endpoints of the current edge is already busy.
       hi = 0;
-    } else if (u == av[e]) {
+    } else if (u + au[e] - 1 == av[e]) {
       // We have a closed a loop. We're good as long as nothing is dangling.
       for (int i = 1; i < newcount - 1; i++) {
-	if (newstate[i] != -1 && newstate[i] != i + au[e]) {
-	  // Dangling link starting at i + au[e].
+	if (newstate[i] != -1 && newstate[i] != i + 1) {
+	  // Dangling link starting at i + au[e] - 1.
 	  hi = 0;
 	  break;
 	}
@@ -194,8 +203,8 @@ void compute_grid_graph(int max, int want_print) {
       // state accordingly for the call.
       newstate[0] = -1;
       newstate[newcount - 1] = -1;
-      newstate[v - au[e]] = u;
-      newstate[u - au[e]] = v;
+      newstate[v - 1] = u;
+      newstate[u - 1] = v;
       hi = recurse(e + 1, newstate, au[e], newcount);
     }
     // Compress HI -> FALSE nodes.
