@@ -24,9 +24,6 @@ uint32_t zdd_abs_node(uint32_t v, uint32_t lo, uint32_t hi);
 uint32_t zdd_last_node();
 uint32_t zdd_next_node();
 void zdd_count(mpz_ptr);
-// Replace top two ZDDs on the stack with their intersection.
-uint32_t zdd_intersection();
-
 // Returns number of nodes.
 uint32_t zdd_size();
 
@@ -55,3 +52,6 @@ void zdd_contains_0(const int *a, int count);
 // Construct ZDD of sets containing exactly n of the elements in the
 // given list.
 void zdd_contains_exactly_n(int n, const int *a, int count);
+
+// Replace top two ZDDs on the stack with their intersection.
+uint32_t zdd_intersection();

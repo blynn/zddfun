@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "inta.h"
+#include "memo.h"
 #include "zdd.h"
 #include <stdarg.h>
 #include "io.h"

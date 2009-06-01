@@ -28,6 +28,10 @@ uint16_t zdd_set_vmax(int i) {
   return vmax = i;
 }
 
+void vmax_check() {
+  if (!vmax_is_set) die("vmax not set");
+}
+
 void zdd_push() { darray_append(stack, (void *) freenode); }
 void zdd_pop() { darray_remove_last(stack); }
 
@@ -121,6 +125,7 @@ uint32_t zdd_add_node(uint32_t v, int offlo, int offhi) {
 }
 
 uint32_t zdd_intersection() {
+  vmax_check();
   if (darray_count(stack) == 0) return 0;
   if (darray_count(stack) == 1) return (uint32_t) darray_last(stack);
   uint32_t z0 = (uint32_t) darray_at(stack, darray_count(stack) - 2);
@@ -154,9 +159,6 @@ uint32_t zdd_intersection() {
   // for a pool of nodes.
   memo_t tab;
   memo_init(tab);
-
-  memo_t node_tab;
-  memo_init(node_tab);
 
   memo_it insert_template(uint32_t k0, uint32_t k1) {
     uint32_t key[2];
@@ -219,14 +221,14 @@ uint32_t zdd_intersection() {
     printf("%d:%d = %d:%d, %d:%d\n", n[0], n[1], l[0], l[1], h[0], h[1]);
   }
 
-  uint32_t get_node(uint16_t v, uint32_t lo, uint32_t hi) {
+  memo_t node_tab[vmax + 1];
+  for(uint16_t v = 1; v <= vmax; v++) memo_init(node_tab[v]);
+
+  uint32_t unique(uint16_t v, uint32_t lo, uint32_t hi) {
     // Create or return existing node representing !v ? lo : hi.
-    uint32_t key[3];
-    key[0] = lo;
-    key[1] = hi;
-    key[2] = v;
+    uint32_t key[2] = { lo, hi };
     memo_it it;
-    int just_created = memo_it_insert_u(&it, node_tab, (void *) key, 12);
+    int just_created = memo_it_insert_u(&it, node_tab[v], (void *) key, 8);
     if (just_created) {
       memo_it_put(it, (void *) freenode);
       node_ptr n = pool[freenode];
@@ -256,7 +258,7 @@ uint32_t zdd_intersection() {
       return lo;
     }
     // Convert to node.
-    uint32_t r = get_node(t->v, lo, hi);
+    uint32_t r = unique(t->v, lo, hi);
     t->lo = NULL;
     t->n = r;
     return r;
@@ -287,7 +289,7 @@ uint32_t zdd_intersection() {
   memo_forall(tab, clear_it);
   memo_clear(tab);
 
-  memo_clear(node_tab);
+  for(uint16_t v = 1; v <= vmax; v++) memo_clear(node_tab[v]);
   return z0;
 }
 
@@ -334,10 +336,6 @@ void zdd_dump() {
   for(uint32_t i = (uint32_t) darray_last(stack); i < freenode; i++) {
     printf("I%d: !%d ? %d : %d\n", i, pool[i]->v, pool[i]->lo, pool[i]->hi);
   }
-}
-
-void vmax_check() {
-  if (!vmax_is_set) die("vmax not set");
 }
 
 uint32_t zdd_powerset() {
