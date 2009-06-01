@@ -90,7 +90,6 @@ int main() {
   */
 
   // Construct ZDD of all simple loops. See Knuth.
-  
   memo_t node_tab[zdd_vmax() + 1];
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_init(node_tab[v]);
 
@@ -102,6 +101,7 @@ int main() {
     if (just_created) {
       uint32_t r;
       memo_it_put(it, (void *) (r = zdd_abs_node(v, lo, hi)));
+      if (!(r << 15)) printf("node #%x\n", r);
       return r;
     }
     return (uint32_t) memo_it_data(it);
@@ -115,7 +115,7 @@ int main() {
   //
   // Thus rather than consider our choice's effects on every vertex, we can
   // restrict our focus to au[e], ..., av[e].
-  // 
+  //
   // We associate an int with each vertex in our state. -1 means we've already
   // chosen two edges containing this vertex, so can choose no more. Otherwise
   // we store the vertex representing the other end: if we haven't yet picked
@@ -229,7 +229,7 @@ int main() {
     int n = board[i][j];
     if (n != -1) {
       int a[4];
-      int e = 1; 
+      int e = 1;
       // Top left corner should have two outedges: one right, one down.
       while(au[e] != vtab[i][j]) e++;
       a[0] = e;
@@ -244,7 +244,7 @@ int main() {
       a[3] = e;
       zdd_contains_exactly_n(n, a, 4);
 
-      int n = i * max + j;
+      int n = i * max + j + 1;
       while (!(n & 1)) {
 	n >>= 1;
 	zdd_intersection();
@@ -284,7 +284,26 @@ int main() {
       pic[r][c] = r & 1 ? '|' : '-';
     }
 
-    for(int i = 0; i < 2 * max; i++) puts(pic[i]);
+    for(int i = 0; i < 2 * max; i++) {
+      for(int j = 0; j < 2 * max; j++) {
+	switch(pic[i][j]) {
+	  case '|':
+	    printf("\u2502");
+	    break;
+	  case '-':
+	    printf("\u2500");
+	    break;
+	  case '.':
+	    printf("\u00b7");
+	    break;
+	  default:
+	    putchar(pic[i][j]);
+	    break;
+	}
+      }
+      //puts(pic[i]);
+      putchar('\n');
+    }
     putchar('\n');
   }
   zdd_forall(printsol);

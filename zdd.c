@@ -235,7 +235,7 @@ uint32_t zdd_intersection() {
       n->v = v;
       n->lo = lo;
       n->hi = hi;
-      if (!(freenode % 100000)) printf("freenode = %d\n", freenode);
+      if (!(freenode << 15)) printf("freenode = %x\n", freenode);
       if (POOL_MAX == freenode) {
 	die("pool is full");
       }
