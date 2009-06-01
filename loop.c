@@ -10,7 +10,7 @@
 
 int main() {
   zdd_init();
-  int max = 4;
+  int max = 8;
   int vtab[max][max];
   int rtab[max * max + 1], ctab[max * max + 1];
   int v = 1;
@@ -114,7 +114,7 @@ int main() {
       newcount = 2;
     } else {
       state[count] = 0;
-      int just_created = memo_it_insert(&it, cache[e], (void *) state);
+      int just_created = memo_it_insert(&it, cache[e], state);
       if (!just_created) return (uint32_t) memo_it_data(it);
       // Examine part of state that cannot be affected by future choices,
       // including whether we include the current edge.
@@ -172,8 +172,8 @@ int main() {
     } else if (u == av[e]) {
       // We have a closed a loop. We're good as long as nothing is dangling.
       for (int i = 1; i < newcount - 1; i++) {
-	// Dangling link starting at i + au[e].
-	if (newstate[i] != i + au[e]) {
+	if (newstate[i] != -1 && newstate[i] != i + au[e]) {
+	  // Dangling link starting at i + au[e].
 	  hi = 0;
 	  break;
 	}
@@ -226,7 +226,5 @@ int main() {
     for(int i = 0; i < 2 * max; i++) puts(pic[i]);
     putchar('\n');
   }
-  zdd_forall(printsol);
-
-  return 0;
+  //zdd_forall(printsol);
 }
