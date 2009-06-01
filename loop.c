@@ -10,7 +10,34 @@
 
 int main() {
   zdd_init();
-  int max = 8;
+
+  int max;
+  if (!scanf("%d\n", &max)) die("input error");
+  int board[max][max];
+  for(int i = 0; i < max; i++) {
+    int c;
+    for(int j = 0; j < max; j++) {
+      c = getchar();
+      if (c == EOF || c == '\n') die("input error");
+      switch(c) {
+	case '.':
+	  board[i][j] = -1;
+	  break;
+	case '0' ... '4':
+	  board[i][j] = c - '0';
+	  break;
+	default:
+	  die("input error");
+      }
+    }
+    c = getchar();
+    if (c != '\n') die("input error");
+  }
+  // The size of a puzzle is the squares, but we really care about the edges
+  // between their corners. If there are n^2 squares, then there are (n + 1)^2
+  // corners.
+  max++;
+
   int vtab[max][max];
   int rtab[max * max + 1], ctab[max * max + 1];
   int v = 1;
@@ -195,13 +222,40 @@ int main() {
   zdd_set_root(recurse(1, NULL, 0, 0));
   for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
-  zdd_dump();
-  mpz_t z;
-  mpz_init(z);
-  zdd_count(z);
-  gmp_printf("%Zd\n", z);
-  mpz_clear(z);
-  zdd_check();
+
+  // Add in puzzle conditions.
+  int done = 0;
+  for(int i = 0; i < max - 1; i++) for(int j = 0; j < max - 1; j++) {
+    int n = board[i][j];
+    if (n != -1) {
+      int a[4];
+      int e = 1; 
+      // Top left corner should have two outedges: one right, one down.
+      while(au[e] != vtab[i][j]) e++;
+      a[0] = e;
+      a[1] = e + 1;
+      EXPECT(au[e + 1] == vtab[i][j]);
+      // One more from the top right corner going down.
+      while(au[e] != vtab[i][j + 1]) e++;
+      if (av[e] != vtab[i + 1][j + 1]) e++;
+      a[2] = e;
+      // One more from the bottom left corner going right.
+      while(au[e] != vtab[i + 1][j]) e++;
+      a[3] = e;
+      zdd_contains_exactly_n(n, a, 4);
+
+      int n = i * max + j;
+      while (!(n & 1)) {
+	n >>= 1;
+	zdd_intersection();
+	done++;
+      }
+    }
+  }
+  while (done < max * max) {
+    zdd_intersection();
+    done++;
+  }
 
   void printsol(int *v, int vcount) {
     char pic[2 * max][2 * max];
@@ -215,6 +269,13 @@ int main() {
       pic[2 * i][2 * max - 1] = '\0';
       pic[2 * i + 1][2 * max - 1] = '\0';
     }
+    for(int i = 0; i < max - 1; i++) {
+      for(int j = 0; j < max - 1; j++) {
+	if (board[i][j] != -1) {
+	  pic[2 * i + 1][2 * j + 1] = '0' + board[i][j];
+	}
+      }
+    }
 
     for(int i = 0; i < vcount; i++) {
       int e = v[i];
@@ -226,5 +287,5 @@ int main() {
     for(int i = 0; i < 2 * max; i++) puts(pic[i]);
     putchar('\n');
   }
-  //zdd_forall(printsol);
+  zdd_forall(printsol);
 }
