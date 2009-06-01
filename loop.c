@@ -33,11 +33,16 @@ int main() {
     c = getchar();
     if (c != '\n') die("input error");
   }
+
   // The size of a puzzle is the squares, but we really care about the edges
   // between their corners. If there are n^2 squares, then there are (n + 1)^2
   // corners.
   max++;
 
+  // Label nodes and edges of grid graph. For example, when max = 3 we have
+  //   1 2 4
+  //   3 5 7
+  //   6 8 9
   int vtab[max][max];
   int rtab[max * max + 1], ctab[max * max + 1];
   int v = 1;
@@ -61,7 +66,6 @@ int main() {
   zdd_set_vmax(max * (max - 1) * 2);
   // Arcs go from u to v.
   int au[zdd_vmax() + 1], av[zdd_vmax() + 1];
-
   i = 1;
   for(v = 1; v <= max * max; v++) {
     if (ctab[v] != max - 1) {
@@ -88,6 +92,41 @@ int main() {
   }
   printf("\n");
   */
+
+  // Add in clues.
+  int done = 0, todo = -1;
+  for(int i = 0; i < max - 1; i++) for(int j = 0; j < max - 1; j++) {
+    int n = board[i][j];
+    if (n != -1) {
+      int a[4];
+      int e = 1;
+      // Top left corner should have two outedges: one right, one down.
+      while(au[e] != vtab[i][j]) e++;
+      a[0] = e;
+      a[1] = e + 1;
+      EXPECT(au[e + 1] == vtab[i][j]);
+      // One more from the top right corner going down.
+      while(au[e] != vtab[i][j + 1]) e++;
+      if (av[e] != vtab[i + 1][j + 1]) e++;
+      a[2] = e;
+      // One more from the bottom left corner going right.
+      while(au[e] != vtab[i + 1][j]) e++;
+      a[3] = e;
+      zdd_contains_exactly_n(n, a, 4);
+
+      todo++;
+      int n = todo + 1;
+      while (!(n & 1)) {
+	n >>= 1;
+	zdd_intersection();
+	done++;
+      }
+    }
+  }
+  while (done < todo) {
+    zdd_intersection();
+    done++;
+  }
 
   // Construct ZDD of all simple loops. See Knuth.
   memo_t node_tab[zdd_vmax() + 1];
@@ -222,40 +261,7 @@ int main() {
   zdd_set_root(recurse(1, NULL, 0, 0));
   for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
-
-  // Add in puzzle conditions.
-  int done = 0;
-  for(int i = 0; i < max - 1; i++) for(int j = 0; j < max - 1; j++) {
-    int n = board[i][j];
-    if (n != -1) {
-      int a[4];
-      int e = 1;
-      // Top left corner should have two outedges: one right, one down.
-      while(au[e] != vtab[i][j]) e++;
-      a[0] = e;
-      a[1] = e + 1;
-      EXPECT(au[e + 1] == vtab[i][j]);
-      // One more from the top right corner going down.
-      while(au[e] != vtab[i][j + 1]) e++;
-      if (av[e] != vtab[i + 1][j + 1]) e++;
-      a[2] = e;
-      // One more from the bottom left corner going right.
-      while(au[e] != vtab[i + 1][j]) e++;
-      a[3] = e;
-      zdd_contains_exactly_n(n, a, 4);
-
-      int n = i * max + j + 1;
-      while (!(n & 1)) {
-	n >>= 1;
-	zdd_intersection();
-	done++;
-      }
-    }
-  }
-  while (done < max * max) {
-    zdd_intersection();
-    done++;
-  }
+  zdd_intersection();
 
   void printsol(int *v, int vcount) {
     char pic[2 * max][2 * max];
@@ -284,8 +290,25 @@ int main() {
       pic[r][c] = r & 1 ? '|' : '-';
     }
 
-    for(int i = 0; i < 2 * max; i++) {
+    /* Plain ASCII output:
+    for(int i = 0; i < 2 * max; i++) puts(pic[i]);
+    */
+
+    for(int i = 0; i < 2 * max - 1; i++) {
       for(int j = 0; j < 2 * max; j++) {
+	int analyse() {
+	  int n = 0;
+	  int filled(int x, int y) {
+	    if (x >= 0 && x < 2 * max - 1 && y >= 0 && y < 2 * max - 1 &&
+	        pic[x][y] != ' ') return 1;
+	    return 0;
+	  }
+	  if (filled(i - 1, j)) n += 1;
+	  if (filled(i, j - 1)) n += 2;
+	  if (filled(i + 1, j)) n += 4;
+	  if (filled(i, j + 1)) n += 8;
+	  return n;
+	}
 	switch(pic[i][j]) {
 	  case '|':
 	    printf("\u2502");
@@ -294,15 +317,41 @@ int main() {
 	    printf("\u2500");
 	    break;
 	  case '.':
-	    printf("\u00b7");
+	    switch(analyse()) {
+	      case 0:
+		printf("\u00b7");
+		break;
+	      case 3:
+		printf("\u2518");
+		break;
+	      case 5:
+		printf("\u2502");
+		break;
+	      case 6:
+		printf("\u2510");
+		break;
+	      case 9:
+		printf("\u2514");
+		break;
+	      case 10:
+		printf("\u2500");
+		break;
+	      case 12:
+		printf("\u250c");
+		break;
+	      default:
+		printf("*");
+		break;
+	    }
+	    break;
+	  case '\0':
+	    putchar('\n');
 	    break;
 	  default:
 	    putchar(pic[i][j]);
 	    break;
 	}
       }
-      //puts(pic[i]);
-      putchar('\n');
     }
     putchar('\n');
   }
