@@ -10,7 +10,7 @@
 
 int main() {
   zdd_init();
-  int max = 3;
+  int max = 4;
   int vtab[max][max];
   int rtab[max * max + 1], ctab[max * max + 1];
   int v = 1;
@@ -96,10 +96,16 @@ int main() {
   //
   // When picking an edge that closes a loop, we see if we have picked edges
   // outside the loop; if so, the set of edges is not a simple loop.
+  memo_t cache[zdd_vmax() + 1];
+  for(int i = 0; i <= zdd_vmax(); i++) memo_init(cache[i]);
   uint32_t recurse(int e, char *state, char start, int count) {
     char newstate[max + 1];
     int newcount = 0;
-    memo_it it;
+    memo_it it = NULL;
+    uint32_t memoize(uint32_t n) {
+      if (it) return (uint32_t) memo_it_put(it, (void *) n);
+      return n;
+    }
     // state == NULL is a special case that we use during the first call.
     if (!state) {
       // I really should be using au[] and av[].
@@ -121,7 +127,7 @@ int main() {
 	if (otherend != -1 && otherend != start + i) {
 	  // Vertex start + i is dangling, and we can no longer connect it to
 	  // our loop.
-	  return 0;
+	  return memoize(0);
 	}
       }
       // Copy over the part of the state that is still relevant.
@@ -142,11 +148,11 @@ int main() {
 	// ... produced a complete loop already:
 	// We want !V ? TRUE : FALSE. In a ZDD, this gets compressed to
 	// simply TRUE.
-	return 1;
+	return memoize(1);
       } else {
 	// ... or we need the last edge to finish the loop:
 	// We want !V ? FALSE : TRUE. (An elementary family.)
-	return unique(e, 0, 1);
+	return memoize(unique(e, 0, 1));
       }
     }
 
@@ -182,11 +188,12 @@ int main() {
       hi = recurse(e + 1, newstate, au[e], newcount);
     }
     // Compress HI -> FALSE nodes.
-    if (!hi) return lo;
-    return unique(e, lo, hi);
+    if (!hi) return memoize(lo);
+    return memoize(unique(e, lo, hi));
   }
   zdd_push();
   zdd_set_root(recurse(1, NULL, 0, 0));
+  for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
   zdd_dump();
   mpz_t z;
@@ -196,5 +203,30 @@ int main() {
   mpz_clear(z);
   zdd_check();
 
+  void printsol(int *v, int vcount) {
+    char pic[2 * max][2 * max];
+    for(int i = 0; i < max; i++) {
+      for(int j = 0; j < max; j++) {
+	pic[2 * i][2 * j] = '.';
+	pic[2 * i][2 * j + 1] = ' ';
+	pic[2 * i + 1][2 * j] = ' ';
+	pic[2 * i + 1][2 * j + 1] = ' ';
+      }
+      pic[2 * i][2 * max - 1] = '\0';
+      pic[2 * i + 1][2 * max - 1] = '\0';
+    }
+
+    for(int i = 0; i < vcount; i++) {
+      int e = v[i];
+      int r = rtab[au[e]] + rtab[av[e]];
+      int c = ctab[au[e]] + ctab[av[e]];
+      pic[r][c] = r & 1 ? '|' : '-';
+    }
+
+    for(int i = 0; i < 2 * max; i++) puts(pic[i]);
+    putchar('\n');
+  }
+  zdd_forall(printsol);
+
   return 0;
-} 
+}

@@ -45,8 +45,8 @@ static inline int memo_it_is_off(memo_it it) {
   return !it;
 }
 
-static inline void memo_it_put(memo_it it, void *data) {
-  it->data = data;
+static inline void* memo_it_put(memo_it it, void *data) {
+  return it->data = data;
 }
 
 static inline void *memo_it_data(memo_it it) {
@@ -88,3 +88,7 @@ memo_it memo_it_at_u(memo_ptr memo, const unsigned char *key, int len);
 
 // Faster than memo_at_u if you know that the key is definitely in the tree.
 void *memo_sure_at_u(memo_ptr memo, const unsigned char *key, int len);
+
+// Finds or creates an entry with the given key and writes it to *it.
+// Returns 1 if a new memo_it was created.
+int memo_it_insert(memo_it *it, memo_ptr memo, const char *key);

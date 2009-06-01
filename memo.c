@@ -524,3 +524,84 @@ int memo_it_insert_u(memo_it *it,
   *it = pleaf;
   return 1;
 }
+
+int memo_it_insert(memo_it *it, memo_ptr memo, const char *key) {
+  if (!memo->root) {
+    memo_leaf_ptr leaf = malloc(sizeof(memo_leaf_t));
+    memo_leaf_put(leaf, NULL, key);
+    memo->root = (memo_node_ptr) leaf;
+    *it = leaf;
+    return 1;
+  }
+
+  // The stack may seem cumbersome, but it seems to beat simpler solutions:
+  // it appears we usually backtrack only a little, so rather than start from
+  // the root again, we walk back up the tree.
+  memo_node_ptr stack_space[put_stack_size];
+  memo_node_ptr *stack = stack_space;
+  int stack_max = put_stack_size;
+  int i = 0;
+  int keylen = (strlen(key) << 3) - 1;
+  memo_node_ptr t = memo->root;
+  stack[i] = t;
+  while (MEMO_NODE == t->type) {
+    // If the key is shorter than the remaining keys on this subtree,
+    // we can compare it against any of them (and are guaranteed the new
+    // node must be inserted above this node). However, this is uncommon thus
+    // not worth optimizing. We let it loop through each time down the
+    // left path.
+    if (keylen < t->critbit || !testbit(key, t->critbit)) {
+      t = t->left;
+    } else {
+      t = t->right;
+    }
+    i++;
+    if (i == stack_max) {
+      // Badly balanced tree? This is going to cost us.
+      stack_max *= 2;
+      if (stack == stack_space) {
+	stack = malloc(stack_max * sizeof(memo_node_ptr));
+	memcpy(stack, stack_space, put_stack_size * sizeof(memo_node_ptr));
+      } else stack = realloc(stack, stack_max * sizeof(memo_node_ptr));
+    }
+    stack[i] = t;
+  }
+
+  memo_leaf_ptr leaf = (memo_leaf_ptr) t;
+  int res = firstcritbit(key, leaf->key);
+  if (!res) {
+    *it = leaf;
+    return 0;
+  }
+
+  memo_leaf_ptr pleaf = malloc(sizeof(memo_leaf_t));
+  memo_node_ptr pnode = malloc(sizeof(memo_node_t));
+  memo_leaf_put(pleaf, NULL, key);
+  pnode->type = MEMO_NODE;
+  pnode->critbit = abs(res) - 1;
+
+  // Walk back up tree to find place to insert new node.
+  while(i > 0 && pnode->critbit < stack[i - 1]->critbit) i--;
+
+  if (res > 0) {
+    // Key is bigger, therefore it goes on the right.
+    pnode->left = stack[i];
+    pnode->right = (memo_node_ptr) pleaf;
+  } else {
+    // Key is smaller, therefore it goes on the left.
+    pnode->left = (memo_node_ptr) pleaf;
+    pnode->right = stack[i];
+  }
+  if (!i) {
+    memo->root = pnode;
+  } else {
+    if (stack[i - 1]->left == stack[i]) {
+      stack[i - 1]->left = pnode;
+    } else {
+      stack[i - 1]->right = pnode;
+    }
+  }
+  if (stack != stack_space) free(stack);
+  *it = pleaf;
+  return 1;
+}
