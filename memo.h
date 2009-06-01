@@ -24,22 +24,21 @@ typedef struct memo_leaf_s *memo_leaf_ptr;
 typedef memo_leaf_ptr memo_it;
 
 struct memo_s {
-  int count;
   memo_node_ptr root;
 };
 typedef struct memo_s memo_t[1];
 typedef struct memo_s *memo_ptr;
 
-void memo_init(memo_ptr memo);
 void memo_clear(memo_ptr memo);
+
+static inline void memo_init(memo_ptr memo) {
+  memo->root = NULL;
+}
 
 int memo_has(memo_ptr memo, const char *key);
 void *memo_at(memo_ptr memo, const char *key);
 memo_it memo_put(memo_ptr memo, void *data, const char *key);
 
-static inline int memo_count(memo_t memo) {
-  return memo->count;
-}
 void *memo_alloc();
 
 static inline int memo_it_is_off(memo_it it) {

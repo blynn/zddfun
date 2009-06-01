@@ -25,14 +25,6 @@ void memo_node_free(memo_node_ptr t) {
   free(t);
 }
 
-void memo_init(memo_ptr memo) {
-  memo->count = 0;
-  // Maximum depth reached, until cleared. Maintaining the true maximum
-  // depth would be expensive because of deletion, though it could
-  // be done by maintaining an array of integers.
-  memo->root = NULL;
-}
-
 void *memo_alloc() {
   return malloc(sizeof(struct memo_s));
 }
@@ -126,7 +118,6 @@ memo_it memo_put_with(memo_ptr memo, void *(*fn)(void *), const char *key) {
     memo_leaf_ptr leaf = malloc(sizeof(memo_leaf_t));
     memo_leaf_put(leaf, fn(NULL), key);
     memo->root = (memo_node_ptr) leaf;
-    memo->count++;
     return leaf;
   }
 
@@ -167,7 +158,6 @@ memo_it memo_put_with(memo_ptr memo, void *(*fn)(void *), const char *key) {
     return leaf;
   }
 
-  memo->count++;
   memo_leaf_ptr pleaf = malloc(sizeof(memo_leaf_t));
   memo_node_ptr pnode = malloc(sizeof(memo_node_t));
   memo_leaf_put(pleaf, fn(NULL), key);
@@ -233,7 +223,6 @@ void *memo_remove(memo_ptr memo, const char *key) {
     }
     stack[i] = t;
   }
-  memo->count--;
   memo_leaf_ptr p = (memo_leaf_ptr) t;
   if (0 == i) {  // We found it at the root.
     memo->root = NULL;
@@ -336,7 +325,6 @@ memo_leaf_ptr memo_put_u(memo_ptr memo,
     memo_leaf_ptr leaf = malloc(sizeof(memo_leaf_t));
     memo_leaf_put_u(leaf, data, key, len);
     memo->root = (memo_node_ptr) leaf;
-    memo->count++;
     return leaf;
   }
 
@@ -373,7 +361,6 @@ memo_leaf_ptr memo_put_u(memo_ptr memo,
     return leaf;
   }
 
-  memo->count++;
   memo_leaf_ptr pleaf = malloc(sizeof(memo_leaf_t));
   memo_node_ptr pnode = malloc(sizeof(memo_node_t));
   memo_leaf_put_u(pleaf, data, (unsigned char *) key, len);
@@ -427,7 +414,6 @@ void memo_remove_all_with(memo_ptr memo, void (*fn)(void *data, const char *key)
   if (memo->root) {
     remove_all_recurse(memo->root, fn);
     memo->root = NULL;
-    memo->count = 0;
   }
 }
 
@@ -468,7 +454,6 @@ int memo_it_insert_u(memo_it *it,
     memo_leaf_ptr leaf = malloc(sizeof(memo_leaf_t));
     memo_leaf_put_u(leaf, NULL, key, len);
     memo->root = (memo_node_ptr) leaf;
-    memo->count++;
     *it = leaf;
     return 1;
   }
@@ -508,7 +493,6 @@ int memo_it_insert_u(memo_it *it,
     return 0;
   }
 
-  memo->count++;
   memo_leaf_ptr pleaf = malloc(sizeof(memo_leaf_t));
   memo_node_ptr pnode = malloc(sizeof(memo_node_t));
   memo_leaf_put_u(pleaf, NULL, (unsigned char *) key, len);
