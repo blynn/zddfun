@@ -21,3 +21,5 @@ dom: dom.c $(ZDD)
 tiling_test: tiling_test.c $(ZDD)
 
 loop: loop.c $(ZDD)
+
+cycle_test: cycle_test.c $(ZDD)

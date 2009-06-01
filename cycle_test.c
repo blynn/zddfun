@@ -1,4 +1,14 @@
-// Solve a Slither Link puzzle
+// Confirm that an 2x2 grid graph has 2 simple cycles.
+// Confirm that an 3x3 grid graph has 14 simple cycles (easily checked by hand).
+// Confirm that an 8x8 grid graph has 603841648932 simple cycles (see Knuth).
+// Other results, not verified:
+//   4x4: 214 
+//   5x5: 9350 
+//   6x6: 1222364
+//   7x7: 487150372
+//   9x9: 2318527339461266
+// 10x10: 27359264067916806102
+// 11x11: 988808811046283595068100
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,37 +18,7 @@
 #include <stdarg.h>
 #include "io.h"
 
-int main() {
-  zdd_init();
-
-  int max;
-  if (!scanf("%d\n", &max)) die("input error");
-  int board[max][max];
-  for(int i = 0; i < max; i++) {
-    int c;
-    for(int j = 0; j < max; j++) {
-      c = getchar();
-      if (c == EOF || c == '\n') die("input error");
-      switch(c) {
-	case '.':
-	  board[i][j] = -1;
-	  break;
-	case '0' ... '4':
-	  board[i][j] = c - '0';
-	  break;
-	default:
-	  die("input error");
-      }
-    }
-    c = getchar();
-    if (c != '\n') die("input error");
-  }
-
-  // The size of a puzzle is the squares, but we really care about the edges
-  // between their corners. If there are n^2 squares, then there are (n + 1)^2
-  // corners.
-  max++;
-
+void compute_grid_graph(int max, int want_print) {
   // Label nodes and edges of grid graph. For example, when max = 3 we have
   //   1 2 4
   //   3 5 7
@@ -80,40 +60,18 @@ int main() {
     }
   }
 
-  // Add in clues.
-  int done = 0, todo = -1;
-  for(int i = 0; i < max - 1; i++) for(int j = 0; j < max - 1; j++) {
-    int n = board[i][j];
-    if (n != -1) {
-      int a[4];
-      int e = 1;
-      // Top left corner should have two outedges: one right, one down.
-      while(au[e] != vtab[i][j]) e++;
-      a[0] = e;
-      a[1] = e + 1;
-      EXPECT(au[e + 1] == vtab[i][j]);
-      // One more from the top right corner going down.
-      while(au[e] != vtab[i][j + 1]) e++;
-      if (av[e] != vtab[i + 1][j + 1]) e++;
-      a[2] = e;
-      // One more from the bottom left corner going right.
-      while(au[e] != vtab[i + 1][j]) e++;
-      a[3] = e;
-      zdd_contains_exactly_n(n, a, 4);
-
-      todo++;
-      int n = todo + 1;
-      while (!(n & 1)) {
-	n >>= 1;
-	zdd_intersection();
-	done++;
-      }
+  /*
+  for(int i = 1; i <= zdd_vmax(); i++) {
+    printf("%d -> %d\n", au[i], av[i]);
+  }
+  for(int i = 0; i < max; i++) {
+    for(int j = 0; j < max; j++) {
+      printf(" %d", vtab[i][j]);
     }
+    printf("\n");
   }
-  while (done < todo) {
-    zdd_intersection();
-    done++;
-  }
+  printf("\n");
+  */
 
   // Construct ZDD of all simple loops. See Knuth.
   memo_t node_tab[zdd_vmax() + 1];
@@ -248,7 +206,6 @@ int main() {
   zdd_set_root(recurse(1, NULL, 0, 0));
   for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
-  zdd_intersection();
 
   void printsol(int *v, int vcount) {
     char pic[2 * max][2 * max];
@@ -261,13 +218,6 @@ int main() {
       }
       pic[2 * i][2 * max - 1] = '\0';
       pic[2 * i + 1][2 * max - 1] = '\0';
-    }
-    for(int i = 0; i < max - 1; i++) {
-      for(int j = 0; j < max - 1; j++) {
-	if (board[i][j] != -1) {
-	  pic[2 * i + 1][2 * j + 1] = '0' + board[i][j];
-	}
-      }
     }
 
     for(int i = 0; i < vcount; i++) {
@@ -341,6 +291,28 @@ int main() {
       }
     }
     putchar('\n');
+    putchar('\n');
   }
-  zdd_forall(printsol);
+  if (want_print) zdd_forall(printsol);
+}
+
+int main() {
+  zdd_init();
+
+  mpz_t z;
+  mpz_init(z);
+  compute_grid_graph(3, 1);
+  zdd_count(z);
+  gmp_printf("simple loops in 3x3 grid graph: %Zd\n", z);
+  EXPECT(!mpz_cmp_ui(z, 14));
+  zdd_pop();
+  compute_grid_graph(8, 0);
+  zdd_count(z);
+  gmp_printf("simple loops in 8x8 grid graph: %Zd\n", z);
+  mpz_t answer;
+  mpz_init(answer);
+  mpz_set_str(answer, "603841648932", 0);
+  EXPECT(!mpz_cmp(z, answer));
+  mpz_clear(z);
+  mpz_clear(answer);
 }
