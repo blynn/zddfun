@@ -17,6 +17,13 @@ void inta_init(inta_ptr a)
     a->item = malloc(sizeof(int) * a->max);
 }
 
+void inta_init_n(inta_ptr a, int n)
+{
+    a->max = n;
+    a->count = 0;
+    a->item = malloc(sizeof(int) * a->max);
+}
+
 inta_ptr inta_new()
 {
     inta_ptr res = malloc(sizeof(inta_t));

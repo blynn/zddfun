@@ -87,12 +87,21 @@ int main() {
   }
   zdd_set_vmax(v - 1);
 
+  int todo = rcount - 1;
   for(int i = 0; i < rcount; i++) {
     for(int j = 0; j < ccount; j++) {
       zdd_contains_exactly_1(inta_raw(list[i][j]), inta_count(list[i][j]));
-      if (i || j) zdd_intersection();
+      if (j) zdd_intersection();
+    }
+
+    int n = i + 1;
+    while (!(n & 1)) {
+      n >>= 1;
+      zdd_intersection();
+      todo--;
     }
   }
+  while(todo--) zdd_intersection();
 
   int compar(const void *a, const void *b) {
     return inta_count((const inta_ptr) a) > inta_count((const inta_ptr) b);

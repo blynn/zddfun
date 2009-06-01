@@ -150,9 +150,8 @@ uint32_t zdd_intersection() {
   top->n = 1;
 
   // Naive implementation with two tries. One stores templates, the other
-  // unique nodes. Knuth describes how to meld using just memory allocated for
-  // a pool of nodes. Briefly, handle duplicates by executing bucket sort level
-  // by level from the bottom up.
+  // unique nodes. See Knuth for how to meld using just memory allocated
+  // for a pool of nodes.
   memo_t tab;
   memo_init(tab);
 

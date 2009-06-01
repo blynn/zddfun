@@ -34,6 +34,10 @@ static inline int inta_at(inta_t a, int i)
   return a->item[i];
 }
 
+static inline int inta_put(inta_t a, int n, int i) {
+  return a->item[i] = n;
+}
+
 int inta_at_test(inta_ptr a, int (*test)(int));
 int inta_index_of(inta_ptr a, int p);
 int inta_index_of_test(inta_ptr a, int (*test)(int));
@@ -66,3 +70,5 @@ static inline int inta_first(inta_t a) { return a->item[0]; }
 static inline int inta_last(inta_t a) { return a->item[a->count - 1]; }
 
 void inta_qsort(inta_t a, int (*compar)(const void *, const void *));
+
+void inta_init_n(inta_t a, int n);
