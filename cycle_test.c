@@ -162,21 +162,11 @@ void compute_grid_graph(int max, int want_print) {
       // By now newcount == av[e] - au[e].
     }
 
-    if (e == zdd_vmax()) {
-      // We've come to the last edge, so our choices so far must have either...
-      if (newstate[0] == 1) {
-	// ... produced a complete loop already:
-	// We want !V ? TRUE : FALSE. In a ZDD, this gets compressed to
-	// simply TRUE.
-	return memoize(1);
-      } else {
-	// ... or we need the last edge to finish the loop:
-	// We want !V ? FALSE : TRUE. (An elementary family.)
-	return memoize(unique(e, 0, 1));
-      }
-    }
+    // If we've come to the last edge, we must need the last edge to finish the
+    // loop: we want !V ? FALSE : TRUE. (An elementary family.)
+    if (e == zdd_vmax()) return memoize(unique(e, 0, 1));
 
-    // Recurse the case when we don't pick the current edge.
+    // Recurse the case where we don't pick the current edge.
     uint32_t lo = recurse(e + 1, newstate, au[e], newcount);
 
     // Before we recurse the other case, we must check a couple of things.

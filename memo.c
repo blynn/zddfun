@@ -418,7 +418,7 @@ void memo_remove_all_with(memo_ptr memo, void (*fn)(void *data, const char *key)
 }
 
 void memo_remove_all(memo_ptr memo) {
-  if (memo->root) memo_remove_all_with(memo, NULL);
+  memo_remove_all_with(memo, NULL);
 }
 
 void memo_forall(memo_t memo, void (*fn)(void *data, const char *key)) {

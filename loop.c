@@ -1,4 +1,4 @@
-// Solve a Slither Link puzzle
+// Solve a Slither Link puzzle.
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -115,7 +115,8 @@ int main() {
     done++;
   }
 
-  // Construct ZDD of all simple loops. See Knuth.
+  uint32_t p = zdd_root();
+  // Construct ZDD of all simple loops constrained by the clues.
   memo_t node_tab[zdd_vmax() + 1];
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_init(node_tab[v]);
 
@@ -133,26 +134,14 @@ int main() {
     return (uint32_t) memo_it_data(it);
   }
 
-  // By arc e, we have already considered all arcs with sources less than
-  // the current source, au[e], thus nothing we do from now on can affect their
-  // state. Also, av[e] is as least as large as all previous targets we
-  // have considered, so our choices so far cannot possibly influence targets
-  // strictly larger than the current target.
-  //
-  // Thus rather than consider our choice's effects on every vertex, we can
-  // restrict our focus to au[e], ..., av[e].
-  //
-  // We associate an int with each vertex in our state. -1 means we've already
-  // chosen two edges containing this vertex, so can choose no more. Otherwise
-  // we store the vertex representing the other end: if we haven't yet picked
-  // edges from this vertex, the vertex is its own other end.
-  //
-  // When picking an edge that closes a loop, we see if we have picked edges
-  // outside the loop; if so, the set of edges is not a simple loop.
+  // Similar to the routine in cycle_test.c, but at the same time we respect
+  // the clues. The node p in the clue ZDD therefore is part of the state.
   memo_t cache[zdd_vmax() + 1];
   for(int i = 0; i <= zdd_vmax(); i++) memo_init(cache[i]);
-  uint32_t recurse(int e, char *state, char start, int count) {
-    char newstate[max + 1];
+  uint32_t recurse(uint32_t p, char *state, int start, int count) {
+    if (p <= 1) return p;
+    int e = zdd_v(p);
+    char newstate[max + 4 + 1];
     int newcount = 0;
     memo_it it = NULL;
     uint32_t memoize(uint32_t n) {
@@ -161,12 +150,22 @@ int main() {
     }
     // state == NULL is a special case that we use during the first call.
     if (!state) {
-      // I really should be using au[] and av[].
-      newstate[0] = 1;
-      newstate[1] = 2;
-      newcount = 2;
+      for (int j = au[e]; j <= av[e]; j++) {
+	newstate[j - au[e]] = j - au[e] + 1;
+      }
+      newcount = av[e] - au[e] + 1;
     } else {
-      state[count] = 0;
+      // The crit-bit tree uses NULL to terminate keys, so we must
+      // do a sort of variable-length encoding.
+      int hack = p, hacki = 0;
+      state[count] = p;
+      while(hack & ~0x7f) {
+	state[count + hacki] |= 0x80;
+	hack >>= 7;
+	hacki++;
+	state[count + hacki] = hack;
+      }
+      state[count + ++hacki] = 0;
       int just_created = memo_it_insert(&it, cache[e], state);
       if (!just_created) return (uint32_t) memo_it_data(it);
       // Examine part of state that cannot be affected by future choices,
@@ -174,43 +173,51 @@ int main() {
       // Return false node if it's impossible to continue, otherwise
       // remove them from the state and continue.
       int j = au[e] - start;
-      if (j > count - 1) die("bad vertex or edge numbering");
+      if (j > count - 1) {
+	// Future choices cannot change any dangling edges.
+	for (int i = 0; i < j; i++) {
+	  int otherend = state[i];
+	  if (otherend - 1 != i) {
+	    // Vertex start + i is dangling, and we can no longer connect it
+	    // to our loop.
+	    return memoize(0);
+	  }
+	}
+	return memoize(1);
+      }
       for (int i = 0; i < j; i++) {
 	int otherend = state[i];
-	if (otherend != -1 && otherend != start + i) {
-	  // Vertex start + i is dangling, and we can no longer connect it to
-	  // our loop.
+	if (otherend != -1 && otherend - 1 != i) {
+	  // Vertex start + i is dangling, and we can no longer connect it
+	  // to our loop.
 	  return memoize(0);
 	}
       }
       // Copy over the part of the state that is still relevant.
       while(j < count) {
-	newstate[newcount++] = state[j++];
+	int n = state[j];
+	newstate[newcount++] = n < 0 ? -1 : n + start - au[e];
+	j++;
       }
       // Add vertices that now matter to our state.
       j += start;
       while(j <= av[e]) {
-	newstate[newcount++] = j++;
+	newstate[newcount++] = j++ - au[e] + 1;
       }
       // By now newcount == av[e] - au[e].
     }
 
-    if (e == zdd_vmax()) {
-      // We've come to the last edge, so our choices so far must have either...
-      if (newstate[0] == au[e]) {
-	// ... produced a complete loop already:
-	// We want !V ? TRUE : FALSE. In a ZDD, this gets compressed to
-	// simply TRUE.
-	return memoize(1);
-      } else {
-	// ... or we need the last edge to finish the loop:
-	// We want !V ? FALSE : TRUE. (An elementary family.)
-	return memoize(unique(e, 0, 1));
-      }
-    }
+    // If we've come to the last edge, we must need the last edge to finish the
+    // loop: we want !V ? FALSE : TRUE. (An elementary family.)
+    if (e == zdd_vmax()) return memoize(unique(e, 0, 1));
 
-    // Recurse the case when we don't pick the current edge.
-    uint32_t lo = recurse(e + 1, newstate, au[e], newcount);
+    // First, the case where we don't pick the current edge.
+    // If the clues force us to leave every other element out then we cannot
+    // complete a loop (since we have not completed a loop yet). Similarly
+    // we must use the current edge, we cannot complete a loop. Otherwise
+    // recurse.
+    uint32_t lo = 1 >= zdd_lo(p) ? memoize(0) :
+        recurse(zdd_lo(p), newstate, au[e], newcount);
 
     // Before we recurse the other case, we must check a couple of things.
     // Let's initially assume we are done if we pick the current edge!
@@ -222,30 +229,39 @@ int main() {
     if (u == -1 || v == -1) {
       // At least one of the endpoints of the current edge is already busy.
       hi = 0;
-    } else if (u == av[e]) {
-      // We have a closed a loop. We're good as long as nothing is dangling.
+    } else if (u + au[e] - 1 == av[e]) {
+      // We have a closed a loop. We're good as long as nothing is dangling...
       for (int i = 1; i < newcount - 1; i++) {
-	if (newstate[i] != -1 && newstate[i] != i + au[e]) {
-	  // Dangling link starting at i + au[e].
+	if (newstate[i] != -1 && newstate[i] != i + 1) {
+	  // Dangling link starting at i + au[e] - 1.
 	  hi = 0;
 	  break;
 	}
       }
+      // ...and the clues allow us to pick no higher edges.
+      if (1 == hi) {
+	uint32_t q = zdd_hi(p);
+	while(q > 1) q = zdd_lo(q);
+	hi = q;
+      }
+    } else if (1 == zdd_hi(p)) {
+      // The clues allow no future edges, so we cannot complete our loop.
+      hi = 0;
     } else {
       // Recurse the case when we do pick the current edge. Modify the
       // state accordingly for the call.
       newstate[0] = -1;
       newstate[newcount - 1] = -1;
-      newstate[v - au[e]] = u;
-      newstate[u - au[e]] = v;
-      hi = recurse(e + 1, newstate, au[e], newcount);
+      newstate[v - 1] = u;
+      newstate[u - 1] = v;
+      hi = recurse(zdd_hi(p), newstate, au[e], newcount);
     }
     // Compress HI -> FALSE nodes.
     if (!hi) return memoize(lo);
     return memoize(unique(e, lo, hi));
   }
   zdd_push();
-  zdd_set_root(recurse(1, NULL, 0, 0));
+  zdd_set_root(recurse(p, NULL, 0, 0));
   for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
   zdd_intersection();

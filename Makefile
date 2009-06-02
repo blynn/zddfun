@@ -1,6 +1,6 @@
 .PHONY: target
 
-CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc
+CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc -lprofiler
 
 ZDD:=memo.c darray.c zdd.c io.c inta.c
 
