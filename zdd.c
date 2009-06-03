@@ -79,8 +79,7 @@ void zdd_count(mpz_ptr z) {
   mpz_ptr *count = malloc(sizeof(*count) * s);
   for(int i = 0; i < s; i++) count[i] = NULL;
   // Count elements in ZDD rooted at node n.
-  mpz_ptr get_count(uint32_t i) {
-    uint32_t n = 1 >= i ? i : i - r + 2;
+  mpz_ptr get_count(uint32_t n) {
     if (count[n]) return count[n];
     count[n] = malloc(sizeof(mpz_t));
     mpz_init(count[n]);
@@ -90,15 +89,58 @@ void zdd_count(mpz_ptr z) {
     }
     uint32_t x = pool[n]->lo;
     uint32_t y = pool[n]->hi;
+    x = 1 >= x ? x : x - r + 2;
+    y = 1 >= y ? y : y - r + 2;
     mpz_add(count[n], get_count(x), get_count(y));
     return count[n];
   }
-
+  r = 1 >= r ? r : 2;
   mpz_set(z, get_count(r));
   for(int i = 0; i < s; i++) {
     if (count[i]) {
       mpz_clear(count[i]);
       free(count[i]);
+    }
+  }
+}
+
+void zdd_count_total(mpz_ptr zcount, mpz_ptr ztotal) {
+  uint32_t r = zdd_root(), s = zdd_size();
+  mpz_ptr *count = malloc(sizeof(*count) * s);
+  mpz_ptr *total = malloc(sizeof(*total) * s);
+  for(int i = 0; i < s; i++) count[i] = NULL;
+  // Count elements in ZDD rooted at node n.
+  // Along with total size of solutions.
+  mpz_ptr get_count(uint32_t n) {
+    if (count[n]) return count[n];
+    count[n] = malloc(sizeof(mpz_t));
+    mpz_init(count[n]);
+    total[n] = malloc(sizeof(mpz_t));
+    mpz_init(total[n]);
+    if (n <= 1) {
+      mpz_set_ui(count[n], n);
+      // total[n] should be zero.
+      return count[n];
+    }
+    uint32_t x = pool[n]->lo;
+    uint32_t y = pool[n]->hi;
+    x = 1 >= x ? x : x - r + 2;
+    y = 1 >= y ? y : y - r + 2;
+    mpz_add(count[n], get_count(x), get_count(y));
+    mpz_add(total[n], total[x], total[y]);
+    mpz_add(total[n], total[n], count[y]);
+    return count[n];
+  }
+
+  r = 1 >= r ? r : 2;
+  mpz_set(zcount, get_count(r));
+  mpz_set(ztotal, total[r]);
+  for(int i = 0; i < s; i++) {
+    if (count[i]) {
+      mpz_clear(count[i]);
+      free(count[i]);
+      mpz_clear(total[i]);
+      free(total[i]);
     }
   }
 }
@@ -388,7 +430,7 @@ void zdd_forlargest(void (*fn)(int *, int)) {
     choice[p - r] = 0;
     return score[p - r] = m;
   }
-  printf("Size = %d\n", recurse(r));
+  printf("max set: %d\n", recurse(r));
   for(uint32_t p = r; p > 1;
       p = !choice[p - r] ? zdd_lo(p) : (v[vcount++] = zdd_v(p), zdd_hi(p)));
   fn(v, vcount);

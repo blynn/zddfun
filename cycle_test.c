@@ -1,15 +1,21 @@
 // Confirm that an 2x2 grid graph has 2 simple cycles.
 // Confirm that an 3x3 grid graph has 14 simple cycles (easily checked by hand).
 // Confirm that an 8x8 grid graph has 603841648932 simple cycles (see Knuth).
-// Other results, not verified:
-//   4x4: 214 
-//   5x5: 9350 
-//   6x6: 1222364
-//   7x7: 487150372
-//   9x9: 2318527339461266
-// 10x10: 27359264067916806102
-// 11x11: 988808811046283595068100
-// 12x12: 109331355810135629946698361372109331355810135629946698361372
+//
+// Sample run below. Results not independently confirmed.
+//  n, cycles in nxn grid graph, average cycle length
+//  2, 2, 2.000000
+//  3, 14, 5.714286
+//  4, 214, 10.710280
+//  5, 9350, 17.462246
+//  6, 1222364, 25.768157
+//  7, 487150372, 35.805114
+//  8, 603841648932, 47.479949
+//  9, 2318527339461266, 60.709770
+// 10, 27359264067916806102, 75.502314
+// 11, 988808811046283595068100, 91.876952
+// 12, 109331355810135629946698361372, 109.838303
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -349,14 +355,21 @@ int main() {
     zdd_pop();
     grid_graph_clear(gg);
   }
-  mpz_t z;
+  mpz_t z, ztotal;
+  mpf_t f, g;
   mpz_init(z);
-  printf(" n, simple cycles in nxn grid graph, average cycle length\n");
+  mpz_init(ztotal);
+  mpf_init(f);
+  mpf_init(g);
+  printf(" n, cycles in nxn grid graph, average cycle length\n");
   for(int n = 2; n <= 12; n++) {
     grid_graph_init(gg, n);
     compute_grid_graph(gg);
-    zdd_count(z);
-    gmp_printf("%2d, %Zd\n", n, z);
+    zdd_count_total(z, ztotal);
+    mpf_set_z(f, ztotal);
+    mpf_set_z(g, z);
+    mpf_div(f, f, g);
+    gmp_printf("%2d, %Zd, %Ff\n", n, z, f);
     zdd_forlargest(printloop);
     switch(n) {
       case 3:
@@ -377,4 +390,7 @@ int main() {
     fflush(stdout);
   }
   mpz_clear(z);
+  mpz_clear(ztotal);
+  mpf_clear(f);
+  mpf_clear(g);
 }
