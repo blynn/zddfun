@@ -116,6 +116,7 @@ int main() {
   }
 
   uint32_t p = zdd_root();
+  uint32_t clue_size = zdd_last_node();
   // Construct ZDD of all simple loops constrained by the clues.
   memo_t node_tab[zdd_vmax() + 1];
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_init(node_tab[v]);
@@ -136,12 +137,12 @@ int main() {
 
   // Similar to the routine in cycle_test.c, but at the same time we respect
   // the clues. The node p in the clue ZDD therefore is part of the state.
-  memo_t cache[zdd_vmax() + 1];
-  for(int i = 0; i <= zdd_vmax(); i++) memo_init(cache[i]);
+  memo_t cache[clue_size + 1];
+  for(int i = 0; i <= clue_size; i++) memo_init(cache[i]);
   uint32_t recurse(uint32_t p, char *state, int start, int count) {
     if (p <= 1) return p;
     int e = zdd_v(p);
-    char newstate[max + 4 + 1];
+    char newstate[max + 1];
     int newcount = 0;
     memo_it it = NULL;
     uint32_t memoize(uint32_t n) {
@@ -150,15 +151,15 @@ int main() {
     }
     // state == NULL is a special case that we use during the first call.
     if (!state) {
-      for (int j = au[e]; j <= av[e]; j++) {
+      for(int j = au[e]; j <= av[e]; j++) {
 	newstate[j - au[e]] = j - au[e] + 1;
       }
       newcount = av[e] - au[e] + 1;
     } else {
       // The crit-bit tree uses NULL to terminate keys, so we must
       // do a sort of variable-length encoding.
-      int hack = p, hacki = 0;
-      state[count] = p;
+      int hack = start, hacki = 0;
+      state[count] = hack;
       while(hack & ~0x7f) {
 	state[count + hacki] |= 0x80;
 	hack >>= 7;
@@ -166,8 +167,8 @@ int main() {
 	state[count + hacki] = hack;
       }
       state[count + ++hacki] = 0;
-      int just_created = memo_it_insert(&it, cache[e], state);
-      if (!just_created) return (uint32_t) memo_it_data(it);
+      int just_created = memo_it_insert(&it, cache[p], state);
+      if (!just_created && p <= 29) return (uint32_t) memo_it_data(it);
       // Examine part of state that cannot be affected by future choices,
       // including whether we include the current edge.
       // Return false node if it's impossible to continue, otherwise
@@ -216,7 +217,7 @@ int main() {
     // complete a loop (since we have not completed a loop yet). Similarly
     // we must use the current edge, we cannot complete a loop. Otherwise
     // recurse.
-    uint32_t lo = 1 >= zdd_lo(p) ? memoize(0) :
+    uint32_t lo = 1 >= zdd_lo(p) ? 0 :
         recurse(zdd_lo(p), newstate, au[e], newcount);
 
     // Before we recurse the other case, we must check a couple of things.
@@ -262,7 +263,7 @@ int main() {
   }
   zdd_push();
   zdd_set_root(recurse(p, NULL, 0, 0));
-  for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
+  for(int i = 0; i <= clue_size; i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
   zdd_intersection();
 
