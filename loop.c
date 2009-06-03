@@ -208,9 +208,17 @@ int main() {
       // By now newcount == av[e] - au[e].
     }
 
-    // If we've come to the last edge, we must need the last edge to finish the
-    // loop: we want !V ? FALSE : TRUE. (An elementary family.)
-    if (e == zdd_vmax()) return memoize(unique(e, 0, 1));
+    // If we've come to the last edge...
+    if (e == zdd_vmax()) {
+      if (newstate[0] == 1) {
+	// ...we have the empty graph:
+	if (zdd_lo(p)) return memoize(1);
+      } else {
+	// ...or must need the last edge to finish the
+	// loop: we want !V ? FALSE : TRUE. (An elementary family.)
+	return memoize(unique(e, 0, 1));
+      }
+    }
 
     // First, the case where we don't pick the current edge.
     // If the clues force us to leave every other element out then we cannot

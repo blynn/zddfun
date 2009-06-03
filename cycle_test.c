@@ -162,9 +162,17 @@ void compute_grid_graph(int max, int want_print) {
       // By now newcount == av[e] - au[e].
     }
 
-    // If we've come to the last edge, we must need the last edge to finish the
-    // loop: we want !V ? FALSE : TRUE. (An elementary family.)
-    if (e == zdd_vmax()) return memoize(unique(e, 0, 1));
+    // If we've come to the last edge...
+    if (e == zdd_vmax()) {
+      if (newstate[0] == 1) {
+	// ...we have the empty graph:
+	return memoize(1);
+      } else {
+	// ...or must need the last edge to finish the
+	// loop; we want !V ? FALSE : TRUE (an elementary family)
+	return memoize(unique(e, 0, 1));
+      }
+    }
 
     // Recurse the case where we don't pick the current edge.
     uint32_t lo = recurse(e + 1, newstate, au[e], newcount);
@@ -300,18 +308,27 @@ int main() {
 
   mpz_t z;
   mpz_init(z);
-  compute_grid_graph(3, 1);
-  zdd_count(z);
-  gmp_printf("simple loops in 3x3 grid graph: %Zd\n", z);
-  EXPECT(!mpz_cmp_ui(z, 14));
-  zdd_pop();
-  compute_grid_graph(8, 0);
-  zdd_count(z);
-  gmp_printf("simple loops in 8x8 grid graph: %Zd\n", z);
-  mpz_t answer;
-  mpz_init(answer);
-  mpz_set_str(answer, "603841648932", 0);
-  EXPECT(!mpz_cmp(z, answer));
+  printf(" n, simple cycles in nxn grid graph\n");
+  for(int n = 2; n <= 12; n++) {
+    compute_grid_graph(n, n <= 3);
+    zdd_count(z);
+    gmp_printf("%2d, %Zd\n", n, z);
+    switch(n) {
+      case 3:
+	EXPECT(!mpz_cmp_ui(z, 14));
+	break;
+      case 8:
+      {
+	mpz_t answer;
+	mpz_init(answer);
+	mpz_set_str(answer, "603841648932", 0);
+	EXPECT(!mpz_cmp(z, answer));
+	mpz_clear(answer);
+	break;
+      }
+    }
+    zdd_pop();
+    fflush(stdout);
+  }
   mpz_clear(z);
-  mpz_clear(answer);
 }
