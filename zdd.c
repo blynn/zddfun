@@ -75,40 +75,32 @@ uint32_t zdd_set_root(uint32_t root) {
 }
 
 void zdd_count(mpz_ptr z) {
-  static mpz_ptr count[1<<24];
-  uint32_t root = zdd_root();
+  uint32_t r = zdd_root(), s = zdd_size();
+  mpz_ptr *count = malloc(sizeof(*count) * s);
+  for(int i = 0; i < s; i++) count[i] = NULL;
   // Count elements in ZDD rooted at node n.
-  void get_count(uint32_t n) {
-    if (count[n]) return;
+  mpz_ptr get_count(uint32_t i) {
+    uint32_t n = 1 >= i ? i : i - r + 2;
+    if (count[n]) return count[n];
     count[n] = malloc(sizeof(mpz_t));
     mpz_init(count[n]);
     if (n <= 1) {
       mpz_set_ui(count[n], n);
-      return;
+      return count[n];
     }
     uint32_t x = pool[n]->lo;
     uint32_t y = pool[n]->hi;
-    if (!count[x]) get_count(x);
-    if (!count[y]) get_count(y);
-    if (n == root) {
-      mpz_add(z, count[x], count[y]);
-    } else {
-      mpz_add(count[n], count[x], count[y]);
+    mpz_add(count[n], get_count(x), get_count(y));
+    return count[n];
+  }
+
+  mpz_set(z, get_count(r));
+  for(int i = 0; i < s; i++) {
+    if (count[i]) {
+      mpz_clear(count[i]);
+      free(count[i]);
     }
   }
-
-  get_count(root);
-
-  void clearz(uint32_t n) {
-    if (!count[n]) return;
-    mpz_clear(count[n]);
-    free(count[n]);
-    count[n] = NULL;
-    if (n <= 1) return;
-    clearz(pool[n]->lo);
-    clearz(pool[n]->hi);
-  }
-  clearz(root);
 }
 
 uint32_t zdd_abs_node(uint32_t v, uint32_t lo, uint32_t hi) {
