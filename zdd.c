@@ -33,7 +33,10 @@ void vmax_check() {
 }
 
 void zdd_push() { darray_append(stack, (void *) freenode); }
-void zdd_pop() { darray_remove_last(stack); }
+void zdd_pop() {
+  darray_remove_last(stack);
+  freenode = darray_is_empty(stack) ? 2 : (uint32_t) darray_last(stack);
+}
 
 void set_node(uint32_t n, uint16_t v, uint32_t lo, uint32_t hi) {
   pool[n]->v = v;
@@ -362,6 +365,43 @@ void zdd_forall(void (*fn)(int *, int)) {
     vcount--;
   }
   recurse(zdd_root());
+}
+
+void zdd_forlargest(void (*fn)(int *, int)) {
+  vmax_check();
+  uint32_t r = zdd_root(), s = zdd_next_node() - r;
+  char *choice = malloc(sizeof(*choice) * s);
+  memset(choice, -1, s);
+  int *score = malloc(sizeof(*score) * s);
+  int v[vmax], vcount = 0;
+
+  int recurse(uint32_t p) {
+    if (1 >= p) return 0;
+    if (choice[p - r] >= 0) return score[p - r];
+    if (1 >= zdd_lo(p)) {
+      // In this case, definitely better off including p in our set.
+      choice[p - r] = 1;
+      return score[p - r] = 1 + recurse(zdd_hi(p));
+    }
+    int m = recurse(zdd_lo(p));
+    int n = recurse(zdd_hi(p)) + 1;
+    // Replace condition with m <= n to find lexicographically last set of
+    // maximum size. At the moment it finds the lexicographically first.
+    // We could also detect m == n and assign choice[p] = 2, so we could later
+    // iterate through all largest sets.
+    if (m < n) {
+      choice[p - r] = 1;
+      return score[p - r] = n;
+    }
+    choice[p - r] = 0;
+    return score[p - r] = m;
+  }
+  printf("Size = %d\n", recurse(r));
+  for(uint32_t p = r; p > 1;
+      p = !choice[p - r] ? zdd_lo(p) : (v[vcount++] = zdd_v(p), zdd_hi(p)));
+  fn(v, vcount);
+  free(choice);
+  free(score);
 }
 
 uint16_t zdd_vmax() {

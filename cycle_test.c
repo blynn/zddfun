@@ -19,23 +19,36 @@
 #include <stdarg.h>
 #include "io.h"
 
-void compute_grid_graph(int max, int want_print) {
+struct grid_graph_s {
+  int vcount;
+  int ecount;
+  int *vtab;
+  int *rtab, *ctab;
+  int *au, *av;
+};
+typedef struct grid_graph_s grid_graph_t[1];
+typedef struct grid_graph_s *grid_graph_ptr;
+
+void grid_graph_init(grid_graph_t gg, int n) {
   // Label nodes and edges of grid graph. For example, when max = 3 we have
   //   1 2 4
   //   3 5 7
   //   6 8 9
-  int vtab[max][max];
-  int rtab[max * max + 1], ctab[max * max + 1];
+  int *newintarray(int n) { return malloc(sizeof(int) * n); }
+  int *vtab = gg->vtab = newintarray(n * n);
+  int *rtab = gg->rtab = newintarray(n * n + 1);
+  int *ctab = gg->ctab = newintarray(n * n + 1);
+  gg->vcount = n;
   int v = 1;
   int i = 0, j = 0;
   for(;;) {
     rtab[v] = i;
     ctab[v] = j;
-    vtab[i][j] = v++;
-    if (i == max - 1) {
-      if (j == max - 1) break;
+    vtab[i * n + j] = v++;
+    if (i == n - 1) {
+      if (j == n - 1) break;
       i = j + 1;
-      j = max - 1;
+      j = n - 1;
     } else if (!j) {
       j = i + 1;
       i = 0;
@@ -44,19 +57,20 @@ void compute_grid_graph(int max, int want_print) {
     }
   }
 
-  zdd_set_vmax(max * (max - 1) * 2);
+  gg->ecount = n * (n - 1) * 2;
   // Arcs go from u to v.
-  int au[zdd_vmax() + 1], av[zdd_vmax() + 1];
+  int *au = gg->au = newintarray(gg->ecount + 1);
+  int *av = gg->av = newintarray(gg->ecount + 1);
   i = 1;
-  for(v = 1; v <= max * max; v++) {
-    if (ctab[v] != max - 1) {
+  for(v = 1; v <= n * n; v++) {
+    if (ctab[v] != n - 1) {
       au[i] = v;
-      av[i] = vtab[rtab[v]][ctab[v] + 1];
+      av[i] = vtab[rtab[v] * n + ctab[v] + 1];
       i++;
     }
-    if (rtab[v] != max - 1) {
+    if (rtab[v] != n - 1) {
       au[i] = v;
-      av[i] = vtab[rtab[v] + 1][ctab[v]];
+      av[i] = vtab[(rtab[v] + 1) * n + ctab[v]];
       i++;
     }
   }
@@ -73,6 +87,21 @@ void compute_grid_graph(int max, int want_print) {
   }
   printf("\n");
   */
+}
+
+void grid_graph_clear(grid_graph_t gg) {
+  free(gg->vtab);
+  free(gg->rtab);
+  free(gg->ctab);
+  free(gg->au);
+  free(gg->av);
+}
+
+void compute_grid_graph(grid_graph_t gg) {
+  int *au = gg->au;
+  int *av = gg->av;
+
+  zdd_set_vmax(gg->ecount);
 
   // Construct ZDD of all simple loops. See Knuth.
   memo_t node_tab[zdd_vmax() + 1];
@@ -92,6 +121,7 @@ void compute_grid_graph(int max, int want_print) {
     return (uint32_t) memo_it_data(it);
   }
 
+  int max = gg->vcount;
   // By arc e, we have already considered all arcs with sources less than
   // the current source, au[e], thus nothing we do from now on can affect their
   // state. Also, av[e] is as least as large as all previous targets we
@@ -213,8 +243,17 @@ void compute_grid_graph(int max, int want_print) {
   zdd_set_root(recurse(1, NULL, 0, 0));
   for(int i = 0; i <= zdd_vmax(); i++) memo_clear(cache[i]);
   for(uint16_t v = 1; v <= zdd_vmax(); v++) memo_clear(node_tab[v]);
+}
 
-  void printsol(int *v, int vcount) {
+int main() {
+  grid_graph_t gg;
+
+  void printloop(int *v, int vcount) {
+    int *rtab = gg->rtab;
+    int *ctab = gg->ctab;
+    int *au = gg->au;
+    int *av = gg->av;
+    int max = gg->vcount;
     char pic[2 * max][2 * max];
     for(int i = 0; i < max; i++) {
       for(int j = 0; j < max; j++) {
@@ -244,7 +283,7 @@ void compute_grid_graph(int max, int want_print) {
 	  int n = 0;
 	  int filled(int x, int y) {
 	    if (x >= 0 && x < 2 * max - 1 && y >= 0 && y < 2 * max - 1 &&
-	        pic[x][y] != ' ') return 1;
+		pic[x][y] != ' ') return 1;
 	    return 0;
 	  }
 	  if (filled(i - 1, j)) n += 1;
@@ -300,19 +339,25 @@ void compute_grid_graph(int max, int want_print) {
     putchar('\n');
     putchar('\n');
   }
-  if (want_print) zdd_forall(printsol);
-}
 
-int main() {
   zdd_init();
-
+  for(int n = 2; n <= 3; n++) {
+    printf("All loops in %dx%d grid graph\n", n, n);
+    grid_graph_init(gg, n);
+    compute_grid_graph(gg);
+    zdd_forall(printloop);
+    zdd_pop();
+    grid_graph_clear(gg);
+  }
   mpz_t z;
   mpz_init(z);
-  printf(" n, simple cycles in nxn grid graph\n");
+  printf(" n, simple cycles in nxn grid graph, average cycle length\n");
   for(int n = 2; n <= 12; n++) {
-    compute_grid_graph(n, n <= 3);
+    grid_graph_init(gg, n);
+    compute_grid_graph(gg);
     zdd_count(z);
     gmp_printf("%2d, %Zd\n", n, z);
+    zdd_forlargest(printloop);
     switch(n) {
       case 3:
 	EXPECT(!mpz_cmp_ui(z, 14));
@@ -328,6 +373,7 @@ int main() {
       }
     }
     zdd_pop();
+    grid_graph_clear(gg);
     fflush(stdout);
   }
   mpz_clear(z);

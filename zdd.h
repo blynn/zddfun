@@ -35,6 +35,10 @@ uint32_t zdd_powerset();
 // Runs callback on every set in ZDD.
 void zdd_forall(void (*fn)(int *, int));
 
+// Runs callback on largest set in ZDD. If there are several candidates,
+// runs on lexicographically smallest.
+void zdd_forlargest(void (*fn)(int *, int));
+
 // Construct ZDD of sets containing exactly 1 of the elements in the given list.
 void zdd_contains_exactly_1(const int *a, int count);
 
