@@ -104,7 +104,7 @@ void zdd_count(mpz_ptr z) {
   }
 }
 
-void zdd_count_total(mpz_ptr zcount, mpz_ptr ztotal) {
+void zdd_count_1(mpz_ptr z0, mpz_ptr z1) {
   uint32_t r = zdd_root(), s = zdd_size();
   mpz_ptr *count = malloc(sizeof(*count) * s);
   mpz_ptr *total = malloc(sizeof(*total) * s);
@@ -133,14 +133,67 @@ void zdd_count_total(mpz_ptr zcount, mpz_ptr ztotal) {
   }
 
   r = 1 >= r ? r : 2;
-  mpz_set(zcount, get_count(r));
-  mpz_set(ztotal, total[r]);
+  mpz_set(z0, get_count(r));
+  mpz_set(z1, total[r]);
   for(int i = 0; i < s; i++) {
     if (count[i]) {
       mpz_clear(count[i]);
       free(count[i]);
       mpz_clear(total[i]);
       free(total[i]);
+    }
+  }
+}
+
+// Compute 0, 1, 2 power sums of sizes of sets.
+void zdd_count_2(mpz_ptr z0, mpz_ptr z1, mpz_ptr z2) {
+  uint32_t r = zdd_root(), s = zdd_size();
+  mpz_ptr *t0 = malloc(sizeof(*t0) * s);
+  mpz_ptr *t1 = malloc(sizeof(*t1) * s);
+  mpz_ptr *t2 = malloc(sizeof(*t2) * s);
+  for(int i = 0; i < s; i++) t0[i] = NULL;
+  // Count elements in ZDD rooted at node n.
+  // Along with t1 size of solutions.
+  mpz_ptr recurse(uint32_t n) {
+    if (t0[n]) return t0[n];
+    t0[n] = malloc(sizeof(mpz_t));
+    mpz_init(t0[n]);
+    t1[n] = malloc(sizeof(mpz_t));
+    mpz_init(t1[n]);
+    t2[n] = malloc(sizeof(mpz_t));
+    mpz_init(t2[n]);
+    if (n <= 1) {
+      // t0[1] should be 1.
+      mpz_set_ui(t0[n], n);
+      // t1[n], t2[n] should be zero.
+      // Another reason why 0^0 = 1.
+      return t0[n];
+    }
+    uint32_t x = pool[n]->lo;
+    uint32_t y = pool[n]->hi;
+    x = 1 >= x ? x : x - r + 2;
+    y = 1 >= y ? y : y - r + 2;
+    mpz_add(t0[n], recurse(x), recurse(y));
+    mpz_add(t1[n], t1[x], t1[y]);
+    mpz_add(t1[n], t1[n], t0[y]);
+    mpz_add(t2[n], t2[x], t2[y]);
+    mpz_addmul_ui(t2[n], t1[y], 2);
+    mpz_add(t2[n], t2[n], t0[y]);
+    return t0[n];
+  }
+
+  r = 1 >= r ? r : 2;
+  mpz_set(z0, recurse(r));
+  mpz_set(z1, t1[r]);
+  mpz_set(z2, t2[r]);
+  for(int i = 0; i < s; i++) {
+    if (t0[i]) {
+      mpz_clear(t0[i]);
+      free(t0[i]);
+      mpz_clear(t1[i]);
+      free(t1[i]);
+      mpz_clear(t2[i]);
+      free(t2[i]);
     }
   }
 }

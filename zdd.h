@@ -26,7 +26,11 @@ uint32_t zdd_next_node();
 // Count number of sets in ZDD.
 void zdd_count(mpz_ptr);
 // Count number of sets in ZDD, as well as sum of sizes of all sets.
-void zdd_count_total(mpz_ptr zcount, mpz_ptr ztotal);
+// (The 0- and 1- power sums.)
+void zdd_count_1(mpz_ptr z0, mpz_ptr z1);
+// Count number of sets in ZDD, the sum of sizes of all sets, and the sum
+// of their squares. (The 0-, 1- and 2- power sums.)
+void zdd_count_2(mpz_ptr z0, mpz_ptr z1, mpz_ptr z2);
 // Returns number of nodes.
 uint32_t zdd_size();
 

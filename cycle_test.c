@@ -3,18 +3,18 @@
 // Confirm that an 8x8 grid graph has 603841648932 simple cycles (see Knuth).
 //
 // Sample run below. Results not independently confirmed.
-//  n, cycles in nxn grid graph, average cycle length
-//  2, 2, 2.000000
-//  3, 14, 5.714286
-//  4, 214, 10.710280
-//  5, 9350, 17.462246
-//  6, 1222364, 25.768157
-//  7, 487150372, 35.805114
-//  8, 603841648932, 47.479949
-//  9, 2318527339461266, 60.709770
-// 10, 27359264067916806102, 75.502314
-// 11, 988808811046283595068100, 91.876952
-// 12, 109331355810135629946698361372, 109.838303
+//  n, cycles in nxn grid graph, average length, standard deviation
+//  2, 2, 2.000000, 2.000000
+//  3, 14, 5.714286, 2.249717
+//  4, 214, 10.710280, 2.771717
+//  5, 9350, 17.462246, 3.152186
+//  6, 1222364, 25.768157, 3.724317
+//  7, 487150372, 35.805114, 4.284285
+//  8, 603841648932, 47.479949, 4.756736
+//  9, 2318527339461266, 60.709770, 5.221515
+// 10, 27359264067916806102, 75.502314, 5.707011
+// 11, 988808811046283595068100, 91.876952, 6.201849
+// 12, 109331355810135629946698361372, 109.838303, 6.697420
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -355,21 +355,28 @@ int main() {
     zdd_pop();
     grid_graph_clear(gg);
   }
-  mpz_t z, ztotal;
-  mpf_t f, g;
+  mpz_t z, z1, z2;
+  mpf_t f, f1, f2;
   mpz_init(z);
-  mpz_init(ztotal);
+  mpz_init(z1);
+  mpz_init(z2);
   mpf_init(f);
-  mpf_init(g);
-  printf(" n, cycles in nxn grid graph, average cycle length\n");
+  mpf_init(f1);
+  mpf_init(f2);
+  printf(" n, cycles in nxn grid graph, average length, standard deviation\n");
   for(int n = 2; n <= 12; n++) {
     grid_graph_init(gg, n);
     compute_grid_graph(gg);
-    zdd_count_total(z, ztotal);
-    mpf_set_z(f, ztotal);
-    mpf_set_z(g, z);
-    mpf_div(f, f, g);
-    gmp_printf("%2d, %Zd, %Ff\n", n, z, f);
+    zdd_count_2(z, z1, z2);
+    mpf_set_z(f, z);
+    mpf_set_z(f1, z1);
+    mpf_set_z(f2, z2);
+    mpf_div(f2, f2, f);
+    mpf_div(f, f1, f);
+    mpf_mul(f1, f, f);
+    mpf_sub(f2, f2, f1);
+    mpf_sqrt(f2, f2);
+    gmp_printf("%2d, %Zd, %Ff, %Ff\n", n, z, f, f2);
     zdd_forlargest(printloop);
     switch(n) {
       case 3:
@@ -390,7 +397,9 @@ int main() {
     fflush(stdout);
   }
   mpz_clear(z);
-  mpz_clear(ztotal);
+  mpz_clear(z1);
+  mpz_clear(z2);
   mpf_clear(f);
-  mpf_clear(g);
+  mpf_clear(f1);
+  mpf_clear(f2);
 }
