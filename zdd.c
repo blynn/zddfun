@@ -104,10 +104,10 @@ void zdd_count(mpz_ptr z) {
   }
 }
 
-void zdd_count_1(mpz_ptr z0, mpz_ptr z1) {
+void zdd_count_1(restrict mpz_ptr z0, restrict mpz_ptr z1) {
   uint32_t r = zdd_root(), s = zdd_size();
-  mpz_ptr *count = malloc(sizeof(*count) * s);
-  mpz_ptr *total = malloc(sizeof(*total) * s);
+  restrict mpz_ptr *count = malloc(sizeof(*count) * s);
+  restrict mpz_ptr *total = malloc(sizeof(*total) * s);
   for(int i = 0; i < s; i++) count[i] = NULL;
   // Count elements in ZDD rooted at node n.
   // Along with total size of solutions.
@@ -146,11 +146,13 @@ void zdd_count_1(mpz_ptr z0, mpz_ptr z1) {
 }
 
 // Compute 0, 1, 2 power sums of sizes of sets.
-void zdd_count_2(mpz_ptr z0, mpz_ptr z1, mpz_ptr z2) {
+void zdd_count_2(restrict mpz_ptr z0,
+                 restrict mpz_ptr z1,
+		 restrict mpz_ptr z2) {
   uint32_t r = zdd_root(), s = zdd_size();
-  mpz_ptr *t0 = malloc(sizeof(*t0) * s);
-  mpz_ptr *t1 = malloc(sizeof(*t1) * s);
-  mpz_ptr *t2 = malloc(sizeof(*t2) * s);
+  restrict mpz_ptr *t0 = malloc(sizeof(*t0) * s);
+  restrict mpz_ptr *t1 = malloc(sizeof(*t1) * s);
+  restrict mpz_ptr *t2 = malloc(sizeof(*t2) * s);
   for(int i = 0; i < s; i++) t0[i] = NULL;
   // Count elements in ZDD rooted at node n.
   // Along with t1 size of solutions.

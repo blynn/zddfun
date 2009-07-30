@@ -72,5 +72,25 @@ int main() {
     }
   }
 
+  // The state represents which squares are connected.
+  // state[i] = -2: i is not selected.
+  // state[i] = -1: i is unconnected to anything else in the state.
+  // state[i] = i - j: i is connected to j and j is the largest square less
+  // than i with this property.
+  void recurse(int v, char* state, int start, int size) {
+    int r = rtab[v];
+    int c = ctab[v];
+
+    int newsize = size;
+    if (r - 1 < 0 || c - 1 < 0) newsize++;
+    char newstate[newsize];
+    for (int i = 0; i < size; i++) newstate[i] = state[i];
+    // Omit v:
+    newstate[v] = -1;
+    // Include v:
+    //newstate[v] =
+  }
+  recurse(1, NULL, 0, 0);
+
   return 0;
 }

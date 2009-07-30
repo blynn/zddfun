@@ -1,27 +1,29 @@
-.PHONY: target
+.PHONY: target test clean
 
-CFLAGS:=-lgmp -Wall -std=gnu99 -O2 -ltcmalloc -lprofiler
+CFLAGS := -O2 -Wall -std=gnu99
 
-ZDD:=memo.c darray.c zdd.c io.c inta.c
+# I recommend appending -ltcmalloc for a slight boost.
+LDFLAGS := -lgmp
 
-target: loop
+zddcore := memo darray zdd io inta
 
-sud: sud.c $(ZDD)
+ready := dom fill light loop nono
 
-tri: tri.c $(ZDD)
+tests := cycle_test tiling_test
 
-nono: nono.c $(ZDD)
+misc := sud nuri
 
-light: light.c $(ZDD)
+binaries := $(ready) $(tests) $(misc)
 
-fill: fill.c $(ZDD)
+target: $(ready)
 
-dom: dom.c $(ZDD)
+test: $(tests)
 
-tiling_test: tiling_test.c $(ZDD)
+define rule_fn
+  $(1) : $(addsuffix .o,$(1) $(zddcore))
+endef
 
-loop: loop.c $(ZDD)
+$(foreach x,$(binaries),$(eval $(call rule_fn,$(x))))
 
-cycle_test: cycle_test.c $(ZDD)
-
-nuri: nuri.c $(ZDD)
+clean:
+	-rm $(addsuffix .o,$(binaries)) $(addsuffix .o,$(zddcore))

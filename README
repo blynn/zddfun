@@ -1,0 +1,33 @@
+= ZDD Fun ==
+
+These programs use ZDDs (zero-suppressed binary decision diagrams) to solve
+logic puzzles. See Knuth, "The Art of Computer Programming", Volume 4,
+Fascicle 1, which I partly summarized:
+
+  http://crypto.stanford.edu/pbc/notes/zdd/
+
+Build with make.
+
+|===========================================
+|       Puzzle  |  Sample Input  |  Source
+|===========================================
+|     Dominosa  |  dominosa.txt  |   dom.c
+|    Fillomino  | fillomino.txt  |  fill.c
+|   Lights Out  |     light.txt  | light.c
+| Slither Link  |   slither.txt  |  loop.c
+|     Nonogram  |  nonogram.txt  |  nono.c
+|===========================================
+
+All programs read a puzzle from standard input then print the solution on
+standard output.
+
+The file spi.txt is a Slither Link puzzle I used loop.c to construct. Try
+solving it by hand first.
+
+Standard Sudokus are too big to be efficiently solvable by ZDDs. I found
+out the hard way: see sud.c.
+
+I began a Nurikabe solver but I have since been distracted.
+
+------------------------------------------------------------------------------
+Ben Lynn <benlynn@gmail.com>
