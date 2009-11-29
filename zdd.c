@@ -728,8 +728,7 @@ void zdd_contains_exactly_n(int n, const int *a, int count) {
     int v = -1 == i ? 1 : a[i] + 1;
     uint32_t root;
     if (i == count - 1) {
-      // Base case: by now, n should be zero, so finish off the ZDD with
-      // everything leading to TRUE.
+      // Base case: finish off the ZDD with everything leading to TRUE.
       // We can reach here even in the first invocation of recurse(); this
       // happens if there is nothing in the list.
       if (-1 != i && tab[i][0]) return tab[i][0];

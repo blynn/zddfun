@@ -1,6 +1,22 @@
 #include <stdint.h>
 #include <gmp.h>
 
+// Usage:
+// 1. Call zdd_init() first.
+// 2. Call zdd_set_vmax() with the number of variables (number of elements).
+//    Following Knuth, the variables are 1-indexed.
+// 3. Construct ZDDs by using functions such as zdd_contains_exactly_1, or
+//    manually with the getters and setters. If done manually, call zdd_push()
+//    between trees.
+// 4. Call zdd_intersection() to take the last two trees off the stack and
+//    replace them with their intersection.
+// 5. Now it depends on the application. For a puzzle solver, there is
+//    typically a unique solution which can be read by traversing the HI edges:
+//      for(i = zdd_root; i != 1; i = zdd_hi(i)) {
+//        printf("%d\n", zdd_v(i)); 
+//      }
+//    Or compute statistics on the family of sets with zdd_count() and friends.
+
 void zdd_init();
 void zdd_check();
 uint16_t zdd_vmax();
