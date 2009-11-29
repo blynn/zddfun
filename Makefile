@@ -1,4 +1,4 @@
-.PHONY: target test clean
+.PHONY: target test clean public
 
 CFLAGS := -O2 -Wall -std=gnu99
 
@@ -27,3 +27,7 @@ $(foreach x,$(binaries),$(eval $(call rule_fn,$(x))))
 
 clean:
 	-rm $(addsuffix .o,$(binaries)) $(addsuffix .o,$(zddcore))
+
+public:
+	git push git@github.com:blynn/zddfun.git
+	git push git+ssh://repo.or.cz/srv/git/zddfun.git

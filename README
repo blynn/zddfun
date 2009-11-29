@@ -1,4 +1,5 @@
-= ZDD Fun ==
+= ZDD Fun =
+Ben Lynn <benlynn@gmail.com>
 
 These programs use ZDDs (zero-suppressed binary decision diagrams) to solve
 logic puzzles. See Knuth, "The Art of Computer Programming", Volume 4,
@@ -28,6 +29,3 @@ Standard Sudokus are too big to be efficiently solvable by ZDDs. I found
 out the hard way: see sud.c.
 
 I began a Nurikabe solver but I have since been distracted.
-
-------------------------------------------------------------------------------
-Ben Lynn <benlynn@gmail.com>
